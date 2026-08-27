@@ -15,7 +15,17 @@ export default function CustomersPage() {
   const { toast } = useToast();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('view_mode_customers');
+        if (saved === 'table' || saved === 'grid') return saved;
+      } catch {
+        // Ignore
+      }
+    }
+    return 'table';
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: '', phone: '', email: '', address: '' });
   const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<Customer | null>(null);
@@ -23,6 +33,15 @@ export default function CustomersPage() {
   useEffect(() => {
     fetchCustomers();
   }, []);
+
+  const handleViewModeChange = (mode: 'table' | 'grid') => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('view_mode_customers', mode);
+    } catch {
+      // Ignore storage errors
+    }
+  };
 
   const fetchCustomers = async () => {
     try {
@@ -140,7 +159,7 @@ export default function CustomersPage() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         viewMode={viewMode}
-        onViewModeChange={setViewMode}
+        onViewModeChange={handleViewModeChange}
         onExport={handleExportCustomers}
         exportLabel="Export Customers"
         placeholder="Filter customers by name, phone, or email..."

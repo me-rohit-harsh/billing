@@ -253,7 +253,26 @@ function ProductsContent() {
     }
   };
 
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('view_mode_products');
+        if (saved === 'table' || saved === 'grid') return saved;
+      } catch {
+        // Ignore
+      }
+    }
+    return 'table';
+  });
+
+  const handleViewModeChange = (mode: 'table' | 'grid') => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('view_mode_products', mode);
+    } catch {
+      // Ignore
+    }
+  };
 
   const categoryOptions = categories.map((cat) => ({
     _id: cat.name,
@@ -331,7 +350,7 @@ function ProductsContent() {
           }
         }}
         viewMode={viewMode}
-        onViewModeChange={setViewMode}
+        onViewModeChange={handleViewModeChange}
         onExport={handleExportProducts}
         exportLabel="Export Products"
         placeholder="Filter products by name or category..."

@@ -24,7 +24,26 @@ export default function InventoryPage() {
   const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
   const [stockLogs, setStockLogs] = useState<StockLog[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('view_mode_inventory');
+        if (saved === 'table' || saved === 'grid') return saved;
+      } catch {
+        // Ignore
+      }
+    }
+    return 'table';
+  });
+
+  const handleViewModeChange = (mode: 'table' | 'grid') => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('view_mode_inventory', mode);
+    } catch {
+      // Ignore
+    }
+  };
 
   // Adjustment Modal
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
@@ -197,7 +216,7 @@ export default function InventoryPage() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         viewMode={viewMode}
-        onViewModeChange={setViewMode}
+        onViewModeChange={handleViewModeChange}
         onExport={handleExportInventoryStock}
         exportLabel="Export Stock"
         placeholder="Filter stock inventory by product name or SKU..."

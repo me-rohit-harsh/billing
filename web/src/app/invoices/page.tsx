@@ -16,7 +16,17 @@ export default function InvoicesPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
   const [activeReceipt, setActiveReceipt] = useState<Invoice | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('view_mode_invoices');
+        if (saved === 'table' || saved === 'grid') return saved;
+      } catch {
+        // Ignore
+      }
+    }
+    return 'table';
+  });
 
   useEffect(() => {
     fetchInvoicesAndCustomers();
@@ -30,6 +40,15 @@ export default function InvoicesPage() {
       // Ignore URL parse errors
     }
   }, []);
+
+  const handleViewModeChange = (mode: 'table' | 'grid') => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('view_mode_invoices', mode);
+    } catch {
+      // Ignore storage errors
+    }
+  };
 
   const fetchInvoicesAndCustomers = async () => {
     try {
@@ -89,6 +108,21 @@ export default function InvoicesPage() {
     return matchesSearch && matchesCustomer;
   });
 
+  const getPaymentModeBadge = (mode?: string) => {
+    switch (mode) {
+      case 'CASH':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      case 'UPI':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'CARD':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'CREDIT':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
+      default:
+        return 'bg-slate-100 text-slate-700 border-slate-200';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -114,7 +148,7 @@ export default function InvoicesPage() {
         categoryPlaceholder="All Customers"
         multiSelect={false}
         viewMode={viewMode}
-        onViewModeChange={setViewMode}
+        onViewModeChange={handleViewModeChange}
         onExport={handleExportInvoices}
         exportLabel="Export Invoices"
         placeholder="Search by invoice number, customer, or payment mode..."
@@ -128,46 +162,61 @@ export default function InvoicesPage() {
                 <th className="p-4">Invoice #</th>
                 <th className="p-4">Customer</th>
                 <th className="p-4">Amount</th>
-                <th className="p-4">Payment Mode</th>
-                <th className="p-4 text-right">Action</th>
+                <th className="p-4">Payment</th>
+                <th className="p-4">Date</th>
+                <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm font-semibold text-slate-700">
-              {filteredInvoices.map((inv) => (
-                <tr key={inv._id || inv.invoiceNumber} className="hover:bg-slate-50/80">
-                  <td className="p-4 font-bold text-amber-700">{inv.invoiceNumber}</td>
-                  <td className="p-4 font-medium">{inv.customerName || 'Walk-in Customer'}</td>
-                  <td className="p-4 font-black text-slate-900">₹{inv.grandTotal}</td>
-                  <td className="p-4">
-                    <span className="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold rounded-lg">
-                      {inv.paymentMode}
-                    </span>
-                  </td>
-                  <td className="p-4 text-right">
-                    <button
-                      onClick={() => setActiveReceipt(inv)}
-                      className="inline-flex items-center justify-center w-8 h-8 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer"
-                      title="Print Receipt"
-                    >
-                      <Printer className="w-4 h-4 text-amber-600" />
-                    </button>
+              {filteredInvoices.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-slate-400 font-medium">
+                    No sales invoices found matching search query.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredInvoices.map((inv) => (
+                  <tr key={inv._id || inv.invoiceNumber} className="hover:bg-slate-50/80">
+                    <td className="p-4 font-mono font-bold text-amber-700">{inv.invoiceNumber}</td>
+                    <td className="p-4 font-bold text-slate-900">{inv.customerName || 'Walk-in Customer'}</td>
+                    <td className="p-4 font-extrabold text-slate-900">₹{inv.grandTotal}</td>
+                    <td className="p-4">
+                      <span className={`px-2.5 py-1 text-xs font-black rounded-full border ${getPaymentModeBadge(inv.paymentMode)}`}>
+                        {inv.paymentMode}
+                      </span>
+                    </td>
+                    <td className="p-4 text-xs text-slate-500 font-medium">
+                      {inv.createdAt ? new Date(inv.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '-'}
+                    </td>
+                    <td className="p-4 text-right">
+                      <button
+                        onClick={() => setActiveReceipt(inv)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                      >
+                        <Printer className="w-3.5 h-3.5 text-amber-600" /> Receipt
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       ) : (
-        /* Invoice Cards View Grid */
+        /* Compact Clean Invoice Cards Grid View */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredInvoices.map((inv) => (
-            <div key={inv._id || inv.invoiceNumber} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+            <div
+              key={inv._id || inv.invoiceNumber}
+              className="bg-white border border-slate-200 hover:border-amber-400 rounded-3xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+            >
               <div>
+                {/* Header Row: Invoice Number & Payment Badge */}
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-mono text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
+                  <span className="font-mono text-xs font-extrabold text-amber-800 bg-amber-50 px-3 py-1 rounded-xl border border-amber-200">
                     {inv.invoiceNumber}
                   </span>
-                  <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-md">
+                  <span className={`px-2.5 py-1 text-xs font-black rounded-full border shadow-2xs ${getPaymentModeBadge(inv.paymentMode)}`}>
                     {inv.paymentMode}
                   </span>
                 </div>

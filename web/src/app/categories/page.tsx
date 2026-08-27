@@ -7,6 +7,7 @@ import { Tags, Plus, Edit, Trash2, Package, ArrowRight, AlertCircle, CheckCircle
 import { api, Product } from '@/lib/api';
 import { FormModal } from '@/components/shared/FormModal';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
+import { TableFilter } from '@/components/shared/TableFilter';
 import { useToast } from '@/context/ToastContext';
 import { exportToCSV } from '@/lib/exportUtils';
 
@@ -21,6 +22,27 @@ export default function CategoriesPage() {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('view_mode_categories');
+        if (saved === 'table' || saved === 'grid') return saved;
+      } catch {
+        // Ignore
+      }
+    }
+    return 'table';
+  });
+
+  const handleViewModeChange = (mode: 'table' | 'grid') => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('view_mode_categories', mode);
+    } catch {
+      // Ignore
+    }
+  };
 
   // Modal states
   const [isCategoryFormOpen, setIsCategoryFormOpen] = useState(false);
@@ -52,12 +74,12 @@ export default function CategoriesPage() {
   };
 
   const handleExportCategories = () => {
-    if (categories.length === 0) {
+    if (filteredCategories.length === 0) {
       toast.error('No categories available to export.');
       return;
     }
 
-    const exportData = categories.map((cat) => ({
+    const exportData = filteredCategories.map((cat) => ({
       id: cat._id,
       name: cat.name,
       mappedProductsCount: products.filter((p) => p.category === cat.name).length,
@@ -72,7 +94,7 @@ export default function CategoriesPage() {
     const dateStr = new Date().toISOString().slice(0, 10);
     const success = exportToCSV(`product_categories_${dateStr}`, exportData, fields);
     if (success) {
-      toast.success(`Exported ${categories.length} category item(s) to CSV!`);
+      toast.success(`Exported ${filteredCategories.length} category item(s) to CSV!`);
     }
   };
 
@@ -143,6 +165,10 @@ export default function CategoriesPage() {
     setIsCategoryFormOpen(true);
   };
 
+  const filteredCategories = categories.filter((cat) =>
+    cat.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {/* Page Header */}
@@ -176,6 +202,16 @@ export default function CategoriesPage() {
         </div>
       </div>
 
+      <TableFilter
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        viewMode={viewMode}
+        onViewModeChange={handleViewModeChange}
+        onExport={handleExportCategories}
+        exportLabel="Export Categories"
+        placeholder="Filter categories by name..."
+      />
+
       {categoryError && (
         <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-sm font-semibold rounded-2xl flex items-center justify-between shadow-xs">
           <div className="flex items-center gap-2">
@@ -192,13 +228,13 @@ export default function CategoriesPage() {
         </div>
       )}
 
-      {/* Categories Grid */}
+      {/* Categories View (Table vs Grid) */}
       {isLoading ? (
         <div className="text-center py-16 bg-white rounded-3xl border border-slate-200">
           <div className="w-10 h-10 border-4 border-amber-600/30 border-t-amber-600 rounded-full animate-spin mx-auto mb-3" />
           <p className="text-slate-400 font-medium text-sm">Loading categories...</p>
         </div>
-      ) : categories.length === 0 ? (
+      ) : filteredCategories.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-3xl border border-slate-200 space-y-3">
           <Tags className="w-12 h-12 text-slate-300 mx-auto" />
           <h3 className="font-bold text-slate-700 text-lg">No Categories Found</h3>
@@ -207,14 +243,85 @@ export default function CategoriesPage() {
           </p>
           <button
             onClick={openCreateModal}
-            className="h-10 px-5 bg-amber-600 text-white rounded-xl font-bold text-xs shadow-md"
+            className="h-10 px-5 bg-amber-600 text-white rounded-xl font-bold text-xs shadow-md cursor-pointer"
           >
             Add Category
           </button>
         </div>
+      ) : viewMode === 'table' ? (
+        /* Categories Table View */
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-xs font-extrabold text-slate-500 uppercase">
+                <th className="p-4">Category Name</th>
+                <th className="p-4 text-center">Assigned Products</th>
+                <th className="p-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-sm font-semibold text-slate-700">
+              {filteredCategories.map((cat) => {
+                const mappedProducts = products.filter((p) => p.category === cat.name);
+                const mappedCount = mappedProducts.length;
+
+                return (
+                  <tr key={cat._id} className="hover:bg-slate-50/80">
+                    <td className="p-4 font-bold text-slate-900 flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-extrabold text-xs">
+                        <Package className="w-4 h-4 text-amber-700" />
+                      </div>
+                      {cat.name}
+                    </td>
+                    <td className="p-4 text-center">
+                      <Link
+                        href={`/products?category=${encodeURIComponent(cat.name)}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 transition-all cursor-pointer shadow-2xs hover:scale-105"
+                        title={`View products in ${cat.name}`}
+                      >
+                        {mappedCount} {mappedCount === 1 ? 'Product' : 'Products'}
+                      </Link>
+                    </td>
+                    <td className="p-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(cat)}
+                          className="inline-flex items-center justify-center w-8 h-8 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors shadow-sm cursor-pointer"
+                          title="Rename Category"
+                        >
+                          <Edit className="w-4 h-4 text-amber-600" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCategoryError(null);
+                            if (mappedCount > 0) {
+                              setCategoryError(`Cannot delete category "${cat.name}" because ${mappedCount} product(s) are assigned to it.`);
+                            } else {
+                              setDeleteConfirmTarget(cat);
+                            }
+                          }}
+                          className={`inline-flex items-center justify-center w-8 h-8 border rounded-lg transition-colors shadow-sm cursor-pointer ${
+                            mappedCount > 0
+                              ? 'border-slate-200 text-slate-300 bg-slate-50 cursor-not-allowed'
+                              : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                          }`}
+                          title={mappedCount > 0 ? `Cannot delete: ${mappedCount} product(s) mapped` : 'Delete Category'}
+                        >
+                          <Trash2 className={`w-4 h-4 ${mappedCount > 0 ? 'text-slate-300' : 'text-rose-500'}`} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       ) : (
+        /* Categories Cards Grid View */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {categories.map((cat) => {
+          {filteredCategories.map((cat) => {
             const mappedProducts = products.filter((p) => p.category === cat.name);
             const mappedCount = mappedProducts.length;
 
