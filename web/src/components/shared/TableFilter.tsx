@@ -10,6 +10,7 @@ interface TableFilterProps {
   categories?: { _id: string; name: string }[];
   selectedCategory?: string | string[];
   onCategorySelect?: (catId: any) => void;
+  categoryPlaceholder?: string;
   placeholder?: string;
   viewMode?: 'table' | 'grid';
   onViewModeChange?: (mode: 'table' | 'grid') => void;
@@ -26,6 +27,7 @@ export function TableFilter({
   categories = [],
   selectedCategory = [],
   onCategorySelect,
+  categoryPlaceholder = 'All Categories',
   placeholder = 'Search...',
   viewMode,
   onViewModeChange,
@@ -67,7 +69,7 @@ export function TableFilter({
                 compact
                 height="40px"
                 multi={true}
-                placeholder="All Categories"
+                placeholder={categoryPlaceholder}
                 options={dropdownOptions}
                 value={selectedValues}
                 onChange={(val: string[]) => onCategorySelect(val)}
@@ -79,8 +81,8 @@ export function TableFilter({
                 compact
                 height="40px"
                 multi={false}
-                placeholder="All Categories"
-                options={[{ _id: '', name: 'All Categories' }, ...dropdownOptions]}
+                placeholder={categoryPlaceholder}
+                options={[{ _id: '', name: categoryPlaceholder }, ...dropdownOptions]}
                 value={typeof selectedCategory === 'string' ? selectedCategory : ''}
                 onChange={(val: string) => onCategorySelect(val)}
                 searchable={categories.length > 4}

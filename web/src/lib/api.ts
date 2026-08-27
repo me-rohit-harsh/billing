@@ -57,6 +57,8 @@ export interface Customer {
   email?: string;
   address?: string;
   balanceDue?: number;
+  ordersCount?: number;
+  totalSpent?: number;
 }
 
 export interface InvoiceItem {

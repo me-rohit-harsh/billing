@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Printer, Receipt, FileText, Download } from 'lucide-react';
-import { api, Invoice } from '@/lib/api';
+import { api, Invoice, Customer } from '@/lib/api';
 import { TableFilter } from '@/components/shared/TableFilter';
 import { useStoreSettings } from '@/context/StoreSettingsContext';
 import { useToast } from '@/context/ToastContext';
@@ -12,20 +12,36 @@ export default function InvoicesPage() {
   const { settings } = useStoreSettings();
   const { toast } = useToast();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<string>('');
   const [activeReceipt, setActiveReceipt] = useState<Invoice | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
 
   useEffect(() => {
-    fetchInvoices();
+    fetchInvoicesAndCustomers();
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const search = params.get('customer') || params.get('search');
+      if (search) {
+        setSelectedCustomer(search);
+      }
+    } catch {
+      // Ignore URL parse errors
+    }
   }, []);
 
-  const fetchInvoices = async () => {
+  const fetchInvoicesAndCustomers = async () => {
     try {
-      const res = await api.get('/invoices');
-      setInvoices(res.data || []);
+      const [invRes, custRes] = await Promise.all([
+        api.get('/invoices'),
+        api.get('/customers'),
+      ]);
+      setInvoices(invRes.data || []);
+      setCustomers(custRes.data || []);
     } catch {
       setInvoices([]);
+      setCustomers([]);
     }
   };
 
@@ -54,12 +70,24 @@ export default function InvoicesPage() {
     }
   };
 
-  const filteredInvoices = invoices.filter(
-    (inv) =>
+  const customerDropdownOptions = [
+    { _id: 'Walk-in Customer (Guest)', name: 'Walk-in Customer (Guest)' },
+    ...customers.map((c) => ({ _id: c.name, name: c.name })),
+  ];
+
+  const filteredInvoices = invoices.filter((inv) => {
+    const matchesSearch =
       inv.invoiceNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (inv.customerName && inv.customerName.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (inv.paymentMode && inv.paymentMode.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+      (inv.paymentMode && inv.paymentMode.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const matchesCustomer =
+      !selectedCustomer ||
+      (inv.customerName && inv.customerName.toLowerCase() === selectedCustomer.toLowerCase()) ||
+      (!inv.customerName && selectedCustomer === 'Walk-in Customer (Guest)');
+
+    return matchesSearch && matchesCustomer;
+  });
 
   return (
     <div className="space-y-6">
@@ -80,6 +108,11 @@ export default function InvoicesPage() {
       <TableFilter
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        categories={customerDropdownOptions}
+        selectedCategory={selectedCustomer}
+        onCategorySelect={(val) => setSelectedCustomer(typeof val === 'string' ? val : (Array.isArray(val) ? val[0] || '' : ''))}
+        categoryPlaceholder="All Customers"
+        multiSelect={false}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         onExport={handleExportInvoices}

@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Users, Phone, Mail, MapPin, Download } from 'lucide-react';
-import { api, Customer } from '@/lib/api';
+import { useRouter } from 'next/navigation';
+import { Plus, Trash2, Users, Phone, Mail, MapPin, Download, ShoppingBag, Receipt } from 'lucide-react';
+import { api, Customer, Invoice } from '@/lib/api';
 import { FormModal } from '@/components/shared/FormModal';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import { TableFilter } from '@/components/shared/TableFilter';
@@ -10,6 +11,7 @@ import { useToast } from '@/context/ToastContext';
 import { exportToCSV } from '@/lib/exportUtils';
 
 export default function CustomersPage() {
+  const router = useRouter();
   const { toast } = useToast();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,8 +26,29 @@ export default function CustomersPage() {
 
   const fetchCustomers = async () => {
     try {
-      const res = await api.get('/customers');
-      setCustomers(res.data || []);
+      const [custRes, invRes] = await Promise.all([
+        api.get('/customers'),
+        api.get('/invoices'),
+      ]);
+      const customerList: Customer[] = custRes.data || [];
+      const invoiceList: Invoice[] = invRes.data || [];
+
+      const enhanced = customerList.map((cust) => {
+        const custInvoices = invoiceList.filter(
+          (inv) =>
+            (inv.customerName && inv.customerName.trim().toLowerCase() === cust.name.trim().toLowerCase()) ||
+            (inv.customerPhone && cust.phone && inv.customerPhone.trim() === cust.phone.trim())
+        );
+        const ordersCount = custInvoices.length;
+        const totalSpent = custInvoices.reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
+        return {
+          ...cust,
+          ordersCount,
+          totalSpent,
+        };
+      });
+
+      setCustomers(enhanced);
     } catch {
       setCustomers([]);
     }
@@ -42,6 +65,8 @@ export default function CustomersPage() {
       { key: 'phone', label: 'Phone Number' },
       { key: 'email', label: 'Email Address' },
       { key: 'address', label: 'Address / Site Location' },
+      { key: 'ordersCount', label: 'Total Orders' },
+      { key: 'totalSpent', label: 'Total Spent (₹)' },
       { key: 'balanceDue', label: 'Balance Due (₹)' },
     ];
 
@@ -92,7 +117,7 @@ export default function CustomersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-black text-slate-800">Contractors & Customers Directory</h2>
-          <p className="text-slate-500 text-sm font-medium">Manage customer contacts and registered hardware buyer profiles</p>
+          <p className="text-slate-500 text-sm font-medium">Manage customer contacts, order histories, and registered buyer profiles</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -130,13 +155,15 @@ export default function CustomersPage() {
                 <th className="p-4">Phone</th>
                 <th className="p-4">Email</th>
                 <th className="p-4">Address</th>
+                <th className="p-4 text-center">Total Orders</th>
+                <th className="p-4 text-right">Total Spent</th>
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm font-semibold text-slate-700">
               {filteredCustomers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-slate-400 font-medium">
+                  <td colSpan={7} className="p-8 text-center text-slate-400 font-medium">
                     No customers found matching search filter.
                   </td>
                 </tr>
@@ -152,6 +179,19 @@ export default function CustomersPage() {
                     <td className="p-4 font-medium">{cust.phone || '-'}</td>
                     <td className="p-4 font-medium">{cust.email || '-'}</td>
                     <td className="p-4 font-medium text-slate-600">{cust.address || '-'}</td>
+                    <td className="p-4 text-center">
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/invoices?customer=${encodeURIComponent(cust.name)}`)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 transition-all cursor-pointer shadow-2xs hover:scale-105"
+                        title={`Filter sales invoices for ${cust.name}`}
+                      >
+                        {cust.ordersCount || 0} {cust.ordersCount === 1 ? 'Order' : 'Orders'}
+                      </button>
+                    </td>
+                    <td className="p-4 text-right font-black text-slate-900">
+                      ₹{(cust.totalSpent || 0).toFixed(2)}
+                    </td>
                     <td className="p-4 text-right">
                       <button
                         onClick={() => setDeleteConfirmTarget(cust)}
@@ -209,6 +249,22 @@ export default function CustomersPage() {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Order Count & Total Spent Summary */}
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <button
+                  type="button"
+                  onClick={() => router.push(`/invoices?customer=${encodeURIComponent(cust.name)}`)}
+                  className="font-extrabold text-amber-800 bg-amber-100 hover:bg-amber-200 px-2.5 py-1 rounded-full border border-amber-300 flex items-center gap-1.5 transition-all cursor-pointer hover:scale-105"
+                  title={`Filter sales invoices for ${cust.name}`}
+                >
+                  <ShoppingBag className="w-3.5 h-3.5 text-amber-600" />
+                  {cust.ordersCount || 0} {cust.ordersCount === 1 ? 'Order' : 'Orders'}
+                </button>
+                <span className="font-black text-slate-900 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200">
+                  ₹{(cust.totalSpent || 0).toFixed(2)}
+                </span>
               </div>
             </div>
           ))}
