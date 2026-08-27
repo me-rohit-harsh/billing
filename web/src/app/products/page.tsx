@@ -8,7 +8,15 @@ import { FormModal } from '@/components/shared/FormModal';
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-  const [newProduct, setNewProduct] = useState({ name: '', price: 0, stock: 10, category: 'General', taxRate: 18, unit: 'pcs', imageUrl: '' });
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    price: 0,
+    stock: 10,
+    category: 'General',
+    taxRate: 18,
+    unit: 'pcs',
+    imageUrl: '',
+  });
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   useEffect(() => {
@@ -129,17 +137,33 @@ export default function ProductsPage() {
             className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500"
           />
         </div>
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">Price (₹)</label>
             <input
               type="number"
               required
+              min="0"
               value={newProduct.price}
               onChange={(e) => setNewProduct({ ...newProduct, price: Number(e.target.value) })}
               className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500"
             />
           </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Initial Stock Qty</label>
+            <input
+              type="number"
+              required
+              min="0"
+              value={newProduct.stock}
+              onChange={(e) => setNewProduct({ ...newProduct, stock: Number(e.target.value) })}
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">Tax Rate (%)</label>
             <input
@@ -149,7 +173,17 @@ export default function ProductsPage() {
               className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500"
             />
           </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Unit (e.g. pcs, kg)</label>
+            <input
+              type="text"
+              value={newProduct.unit}
+              onChange={(e) => setNewProduct({ ...newProduct, unit: e.target.value })}
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500"
+            />
+          </div>
         </div>
+
         <div>
           <label className="block text-xs font-bold text-slate-700 mb-1">Product Image</label>
           <input
