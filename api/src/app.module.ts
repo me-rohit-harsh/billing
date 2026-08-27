@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { ScheduleModule } from '@nestjs/schedule';
 import { join } from 'path';
 
 import { Product, ProductSchema } from './schemas/product.schema';
@@ -16,11 +17,14 @@ import { CustomersController, CategoriesController } from './controllers/support
 import { DashboardController } from './dashboard/dashboard.controller';
 
 import { AuthModule } from './auth/auth.module';
+import { BackupModule } from './backup/backup.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     AuthModule,
+    BackupModule,
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

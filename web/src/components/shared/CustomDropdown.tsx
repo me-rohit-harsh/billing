@@ -55,6 +55,7 @@ export function CustomDropdown(props: CustomDropdownProps) {
         required = false,
         compact = false,
         searchable,
+        clearable = false,
         loading = false,
         disabled = false,
         multi = false,

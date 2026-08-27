@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ShoppingCart, Package, Users, Receipt, Boxes, Settings, Tags } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Package, Users, Receipt, Boxes, Settings, Tags, CloudUpload } from 'lucide-react';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -21,6 +21,7 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
     { href: '/invoices', label: 'Invoices History', icon: Receipt },
     { href: '/customers', label: 'Customers Directory', icon: Users },
     { href: '/settings', label: 'Store Settings', icon: Settings },
+    { href: '/settings/backup', label: 'Cloud Backup & Sync', icon: CloudUpload },
   ];
 
   return (

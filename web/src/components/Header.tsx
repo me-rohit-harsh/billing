@@ -50,6 +50,8 @@ export function Header({ isCollapsed, onToggleCollapse }: HeaderProps) {
         return 'Customers Directory';
       case '/settings':
         return 'Store Settings';
+      case '/settings/backup':
+        return 'Cloud Backup & Sync';
       default:
         return 'BuildPro Hardware POS';
     }

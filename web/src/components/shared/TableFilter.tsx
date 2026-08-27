@@ -51,7 +51,7 @@ export function TableFilter({
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
+          className="w-full h-10 pl-10 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white transition-all"
         />
       </div>
 
@@ -61,6 +61,7 @@ export function TableFilter({
             {multiSelect ? (
               <CustomDropdown
                 compact
+                height="40px"
                 multi={true}
                 placeholder="All Categories"
                 options={dropdownOptions}
@@ -72,6 +73,7 @@ export function TableFilter({
             ) : (
               <CustomDropdown
                 compact
+                height="40px"
                 multi={false}
                 placeholder="All Categories"
                 options={[{ _id: '', name: 'All Categories' }, ...dropdownOptions]}
@@ -85,11 +87,11 @@ export function TableFilter({
         )}
 
         {viewMode && onViewModeChange && (
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
+          <div className="h-10 flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
             <button
               type="button"
               onClick={() => onViewModeChange('table')}
-              className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+              className={`h-full px-2.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                 viewMode === 'table'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-500 hover:text-slate-900'
@@ -102,7 +104,7 @@ export function TableFilter({
             <button
               type="button"
               onClick={() => onViewModeChange('grid')}
-              className={`p-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+              className={`h-full px-2.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                 viewMode === 'grid'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-500 hover:text-slate-900'
@@ -119,9 +121,9 @@ export function TableFilter({
           <button
             type="button"
             onClick={onExport}
-            className="h-9 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+            className="h-10 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
           >
-            <Download className="w-3.5 h-3.5 text-slate-500" />
+            <Download className="w-4 h-4 text-slate-600" />
             <span>{exportLabel}</span>
           </button>
         )}
