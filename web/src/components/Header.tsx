@@ -190,7 +190,7 @@ export function Header({ isCollapsed, onToggleCollapse }: HeaderProps) {
                         <Link
                           href={`/inventory?adjustProduct=${prod._id}`}
                           onClick={() => setIsNotifOpen(false)}
-                          className="h-7 px-2.5 rounded-lg bg-amber-50 hover:bg-amber-600 text-amber-700 hover:text-white border border-amber-200 hover:border-amber-600 font-bold text-[11px] transition-all flex items-center gap-1 cursor-pointer shrink-0 mt-0.5 shadow-2xs"
+                          className="h-7 px-3 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] shadow-xs transition-all flex items-center gap-1 cursor-pointer shrink-0 mt-0.5"
                         >
                           Restock <ExternalLink className="w-3 h-3" />
                         </Link>

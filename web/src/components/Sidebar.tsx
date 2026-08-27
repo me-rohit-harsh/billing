@@ -6,6 +6,17 @@ import { usePathname } from 'next/navigation';
 import { LayoutDashboard, ShoppingCart, Package, Users, Receipt, Boxes, Settings, Tags, CloudUpload, Store, Zap } from 'lucide-react';
 import { useStoreSettings } from '@/context/StoreSettingsContext';
 
+const themeColorMap: Record<string, { bg: string; text: string; activeNav: string }> = {
+  amber: { bg: 'bg-amber-600', text: 'text-amber-600', activeNav: 'bg-amber-600 text-white shadow-md' },
+  blue: { bg: 'bg-blue-600', text: 'text-blue-600', activeNav: 'bg-blue-600 text-white shadow-md' },
+  emerald: { bg: 'bg-emerald-600', text: 'text-emerald-600', activeNav: 'bg-emerald-600 text-white shadow-md' },
+  purple: { bg: 'bg-purple-600', text: 'text-purple-600', activeNav: 'bg-purple-600 text-white shadow-md' },
+  rose: { bg: 'bg-rose-600', text: 'text-rose-600', activeNav: 'bg-rose-600 text-white shadow-md' },
+  indigo: { bg: 'bg-indigo-600', text: 'text-indigo-600', activeNav: 'bg-indigo-600 text-white shadow-md' },
+  teal: { bg: 'bg-teal-600', text: 'text-teal-600', activeNav: 'bg-teal-600 text-white shadow-md' },
+  slate: { bg: 'bg-slate-700', text: 'text-slate-700', activeNav: 'bg-slate-800 text-white shadow-md' },
+};
+
 interface SidebarProps {
   isCollapsed: boolean;
 }
@@ -18,6 +29,8 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
   useEffect(() => {
     setLogoError(false);
   }, [settings.logoUrl]);
+
+  const activeThemeHex = settings.themeHex || '#d97706';
 
   const navItems = [
     { href: '/dashboard', label: 'Analytics Dashboard', icon: LayoutDashboard },
@@ -50,7 +63,10 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
                 />
               </div>
             ) : (
-              <div className="w-10 h-10 rounded-xl bg-amber-600 flex items-center justify-center text-white font-black text-xl shadow-md shrink-0">
+              <div
+                style={{ backgroundColor: activeThemeHex }}
+                className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-md shrink-0 transition-all"
+              >
                 <Store className="w-5 h-5 text-white" />
               </div>
             )}
@@ -60,7 +76,11 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
                   {settings.storeName || 'BUILDPRO HARDWARE STORE'}
                 </h1>
                 {settings.tagline && (
-                  <span className="text-[11px] font-bold text-amber-600 block truncate mt-0.5" title={settings.tagline}>
+                  <span
+                    style={{ color: activeThemeHex }}
+                    className="text-[11px] font-bold block truncate mt-0.5 transition-colors"
+                    title={settings.tagline}
+                  >
                     {settings.tagline}
                   </span>
                 )}
@@ -79,9 +99,10 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
                 key={item.href}
                 href={item.href}
                 title={isCollapsed ? item.label : undefined}
+                style={isActive ? { backgroundColor: activeThemeHex, color: '#ffffff' } : undefined}
                 className={`flex items-center gap-3 ${isCollapsed ? 'justify-center px-0 py-3' : 'px-4 py-3'
                   } rounded-xl text-sm font-bold transition-all ${isActive
-                    ? 'bg-amber-600 text-white shadow-md'
+                    ? 'text-white shadow-md'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
               >

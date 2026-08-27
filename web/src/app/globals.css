@@ -3,12 +3,66 @@
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
+  --brand-primary: #d97706;
+  --brand-hover: #b45309;
+  --brand-light: #fffbeb;
+  --brand-border: #fde68a;
+  --brand-text: #92400e;
 }
 
 body {
   background-color: #f8fafc !important;
   color: #0f172a !important;
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Dynamic App Brand Color Overrides across all pages */
+.bg-amber-600,
+.bg-amber-500,
+.bg-brand-primary {
+  background-color: var(--brand-primary) !important;
+}
+
+.hover\:bg-amber-700:hover,
+.hover\:bg-amber-600:hover,
+.hover\:bg-brand-hover:hover {
+  background-color: var(--brand-hover) !important;
+}
+
+.hover\:text-white:hover,
+.group:hover .group-hover\:text-white {
+  color: #ffffff !important;
+}
+
+.text-amber-600,
+.text-amber-500,
+.text-brand-primary {
+  color: var(--brand-primary) !important;
+}
+
+.text-amber-700,
+.text-amber-800,
+.text-amber-900,
+.text-brand-text {
+  color: var(--brand-text) !important;
+}
+
+.border-amber-600,
+.border-amber-500,
+.border-brand-primary {
+  border-color: var(--brand-primary) !important;
+}
+
+.border-amber-200,
+.border-amber-300,
+.border-brand-border {
+  border-color: var(--brand-border) !important;
+}
+
+.bg-amber-50,
+.bg-amber-100,
+.bg-brand-light {
+  background-color: var(--brand-light) !important;
 }
 
 /* Custom thin scrollbar for POS cart panes */

@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useStoreSettings, defaultStoreSettings } from '@/context/StoreSettingsContext';
+import { useStoreSettings, defaultStoreSettings, themePalettes } from '@/context/StoreSettingsContext';
 import { useToast } from '@/context/ToastContext';
-import { Store, Tag, MapPin, FileText, Phone, HeartHandshake, ShieldAlert, Sparkles, Save, CheckCircle2, Download, Upload, Trash2, Loader2 } from 'lucide-react';
+import { Store, Tag, MapPin, FileText, Phone, HeartHandshake, ShieldAlert, Sparkles, Save, CheckCircle2, Download, Upload, Trash2, Loader2, Palette, Coins, Printer } from 'lucide-react';
 import { api } from '@/lib/api';
 import { exportToJSON } from '@/lib/exportUtils';
 
@@ -218,6 +218,98 @@ export default function SettingsPage() {
                     </p>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section: App Panel Theme & Custom Color Picker */}
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-5">
+            <h3 className="font-extrabold text-slate-900 text-base border-b border-slate-100 pb-3 flex items-center gap-2">
+              <Palette className="w-5 h-5 text-amber-600" /> App Panel Theme & Custom Color Picker
+            </h3>
+
+            {/* Custom Color Picker Input */}
+            <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="relative w-12 h-12 rounded-2xl overflow-hidden border-2 border-white shadow-md shrink-0">
+                  <input
+                    type="color"
+                    value={formData.themeHex || '#d97706'}
+                    onChange={(e) => {
+                      const hex = e.target.value;
+                      setFormData((prev) => ({ ...prev, themeHex: hex, themeColor: 'custom' }));
+                    }}
+                    className="w-16 h-16 -top-2 -left-2 absolute cursor-pointer"
+                    title="Click to Open Custom Color Picker"
+                  />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-slate-900 text-xs">Custom Brand Accent Color</h4>
+                  <p className="text-[11px] text-slate-400 font-medium">Click swatch to pick any color or type custom hex code</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono font-bold text-slate-400">HEX:</span>
+                <input
+                  type="text"
+                  value={formData.themeHex || '#d97706'}
+                  onChange={(e) => {
+                    const hex = e.target.value;
+                    setFormData((prev) => ({ ...prev, themeHex: hex, themeColor: 'custom' }));
+                  }}
+                  placeholder="#d97706"
+                  className="w-28 px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono text-xs font-bold text-slate-900 uppercase focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center justify-between">
+                <span>Quick Preset Color Palettes</span>
+                <span className="text-[11px] text-slate-400 font-normal lowercase">Click to apply preset hex code</span>
+              </label>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {themePalettes.map((palette) => {
+                  const isSelected = (formData.themeHex || '#d97706').toLowerCase() === palette.hex.toLowerCase();
+                  return (
+                    <button
+                      key={palette.id}
+                      type="button"
+                      onClick={() => {
+                        setFormData((prev) => ({ ...prev, themeColor: palette.id, themeHex: palette.hex }));
+                      }}
+                      className={`p-2.5 rounded-xl border text-left transition-all flex items-center gap-2.5 cursor-pointer ${
+                        isSelected
+                          ? 'border-slate-900 bg-slate-900 text-white shadow-md ring-2 ring-slate-900/20'
+                          : 'border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300 text-slate-800'
+                      }`}
+                    >
+                      <span
+                        style={{ backgroundColor: palette.hex }}
+                        className="w-4 h-4 rounded-full shrink-0 shadow-2xs border border-white/40"
+                      />
+                      <span className="text-xs font-extrabold truncate">{palette.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-100">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <Coins className="w-3.5 h-3.5 text-slate-400" /> Store Currency Symbol
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.currencySymbol || '₹'}
+                  onChange={(e) => handleChange('currencySymbol', e.target.value)}
+                  placeholder="e.g. ₹ or $ or €"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
+                />
               </div>
             </div>
           </div>
