@@ -11,36 +11,66 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* --- POS Thermal Printer (80mm / 3-inch) Print Engine --- */
+@page {
+  size: 80mm auto;
+  margin: 0mm;
+}
+
 @media print {
-  body {
-    background-color: #ffffff !important;
-    color: #000000 !important;
+  @page {
+    size: 80mm auto;
+    margin: 0mm;
   }
 
+  *, *::before, *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  html, body {
+    width: 80mm !important;
+    max-width: 80mm !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide headers, sidebars, controls and non-printable items */
+  header, aside, nav, .no-print {
+    display: none !important;
+  }
+
+  /* Hide standard DOM content during print */
   body * {
     visibility: hidden !important;
   }
 
-  #printable-receipt, #printable-receipt * {
-    visibility: visible !important;
-  }
-
+  /* Force printable receipt to top-left of 80mm thermal paper canvas */
   #printable-receipt {
-    position: absolute !important;
+    visibility: visible !important;
+    display: block !important;
+    position: fixed !important;
     left: 0 !important;
     top: 0 !important;
     width: 80mm !important;
     max-width: 80mm !important;
     margin: 0 !important;
-    padding: 12px !important;
-    box-shadow: none !important;
-    border: none !important;
+    padding: 4mm !important;
     background: #ffffff !important;
     color: #000000 !important;
     font-family: 'Courier New', Courier, monospace !important;
+    z-index: 99999 !important;
   }
 
-  .no-print {
-    display: none !important;
+  #printable-receipt * {
+    visibility: visible !important;
   }
 }

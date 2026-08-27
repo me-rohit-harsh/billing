@@ -12,6 +12,7 @@ export default function POSPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [cart, setCart] = useState<(Product & { qty: number })[]>([]);
+  const [isCartLoaded, setIsCartLoaded] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   
   // Optional Walk-in / Direct Customer details
@@ -25,6 +26,27 @@ export default function POSPage() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [categories, setCategories] = useState<{ _id: string; name: string }[]>([]);
   const [activeReceipt, setActiveReceipt] = useState<Invoice | null>(null);
+
+  // Load cart from localStorage on initial render
+  useEffect(() => {
+    try {
+      const savedCart = localStorage.getItem('pos_cart');
+      if (savedCart) {
+        setCart(JSON.parse(savedCart));
+      }
+    } catch {
+      // Ignore JSON parse errors
+    } finally {
+      setIsCartLoaded(true);
+    }
+  }, []);
+
+  // Save cart to localStorage on changes
+  useEffect(() => {
+    if (isCartLoaded) {
+      localStorage.setItem('pos_cart', JSON.stringify(cart));
+    }
+  }, [cart, isCartLoaded]);
 
   useEffect(() => {
     fetchProducts();

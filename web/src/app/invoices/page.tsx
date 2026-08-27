@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { Printer, Receipt, FileText } from 'lucide-react';
 import { api, Invoice } from '@/lib/api';
 import { TableFilter } from '@/components/shared/TableFilter';
+import { useStoreSettings } from '@/context/StoreSettingsContext';
 
 export default function InvoicesPage() {
+  const { settings } = useStoreSettings();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [activeReceipt, setActiveReceipt] = useState<Invoice | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,7 +28,7 @@ export default function InvoicesPage() {
 
   const filteredInvoices = invoices.filter(
     (inv) =>
-      inv.invoiceNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      inv.invoiceNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (inv.customerName && inv.customerName.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (inv.paymentMode && inv.paymentMode.toLowerCase().includes(searchQuery.toLowerCase()))
   );
@@ -124,11 +126,18 @@ export default function InvoicesPage() {
 
       {activeReceipt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 font-mono text-slate-900 border border-slate-200">
-            <div className="text-center border-b border-dashed border-slate-300 pb-3">
-              <h2 className="font-extrabold text-xl">BILLING PRO STORE</h2>
-              <p className="text-xs text-slate-500">Offline Receipt</p>
-              <p className="text-xs text-slate-500">Invoice: {activeReceipt.invoiceNumber}</p>
+          <div id="printable-receipt" className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 font-mono text-slate-900 border border-slate-200">
+            <div className="text-center border-b border-dashed border-slate-300 pb-3 space-y-0.5">
+              <h2 className="font-extrabold text-lg uppercase">🛠️ {settings.storeName || 'BUILDPRO HARDWARE STORE'}</h2>
+              {settings.tagline && <p className="text-[11px] font-medium">{settings.tagline}</p>}
+              {settings.address && <p className="text-[10px] text-slate-600">{settings.address}</p>}
+              {(settings.gstin || settings.phone) && (
+                <p className="text-[10px] font-bold">
+                  {settings.gstin ? `GSTIN: ${settings.gstin}` : ''} {settings.gstin && settings.phone ? '|' : ''} {settings.phone ? `Ph: ${settings.phone}` : ''}
+                </p>
+              )}
+              <div className="border-t border-dashed border-slate-300 my-1.5" />
+              <p className="text-xs font-bold text-slate-500 uppercase">POS Sales Receipt - Invoice #{activeReceipt.invoiceNumber}</p>
             </div>
             <div className="space-y-2 text-xs">
               {activeReceipt.items.map((item, idx) => (
@@ -148,7 +157,13 @@ export default function InvoicesPage() {
                 <span>{activeReceipt.paymentMode}</span>
               </div>
             </div>
-            <div className="flex gap-2 pt-2">
+            {/* Dynamic Footer Notes */}
+            <div className="border-t border-dashed border-slate-300 pt-2 text-center text-[10px] space-y-0.5">
+              {settings.thankYouNote && <p className="font-bold">{settings.thankYouNote}</p>}
+              {settings.returnPolicy && <p className="text-slate-600">{settings.returnPolicy}</p>}
+              {settings.footerNote && <p className="font-bold pt-0.5">{settings.footerNote}</p>}
+            </div>
+            <div className="flex gap-2 pt-2 no-print">
               <button
                 onClick={() => window.print()}
                 className="flex-1 h-10 rounded-xl bg-blue-600 text-white font-bold text-xs"

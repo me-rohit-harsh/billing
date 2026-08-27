@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useStoreSettings, defaultStoreSettings } from '@/context/StoreSettingsContext';
-import { Store, Tag, MapPin, FileText, Phone, HeartHandshake, ShieldAlert, Sparkles, Save, RotateCcw, CheckCircle2 } from 'lucide-react';
+import { Store, Tag, MapPin, FileText, Phone, HeartHandshake, ShieldAlert, Sparkles, Save, CheckCircle2 } from 'lucide-react';
 
 export default function SettingsPage() {
   const { settings, updateSettings, resetSettings } = useStoreSettings();
@@ -188,15 +188,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-between bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-            <button
-              type="button"
-              onClick={handleReset}
-              className="px-4 py-3 text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-all inline-flex items-center gap-2 cursor-pointer"
-            >
-              <RotateCcw className="w-4 h-4" /> Reset Default Settings
-            </button>
-
+          <div className="flex items-center justify-end bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
             <button
               type="submit"
               className="h-12 px-8 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-sm shadow-lg shadow-amber-600/20 transition-all flex items-center gap-2 cursor-pointer"
