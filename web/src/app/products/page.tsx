@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Package, Edit, History, ArrowDownRight, ArrowUpRight, Boxes } from 'lucide-react';
+import { Plus, Trash2, Package, Edit, History, ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { api, Product } from '@/lib/api';
 import { FormModal } from '@/components/shared/FormModal';
 
@@ -119,10 +119,13 @@ export default function ProductsPage() {
 
     try {
       if (editingProduct) {
-        // If stock changed during edit, log stock adjustment automatically
         const stockDiff = formData.stock - editingProduct.stock;
-        await api.put(`/products/${editingProduct._id}`, { ...formData, imageUrl: finalImageUrl });
         
+        // 1. Update product details (excluding stock, which adjust-stock handles)
+        const { stock, ...productPayload } = formData;
+        await api.put(`/products/${editingProduct._id}`, { ...productPayload, imageUrl: finalImageUrl });
+        
+        // 2. If stock quantity changed, call adjust-stock endpoint ONCE to apply difference & log
         if (stockDiff !== 0) {
           await api.post(`/products/${editingProduct._id}/adjust-stock`, {
             type: stockDiff > 0 ? 'IN' : 'OUT',
@@ -134,7 +137,7 @@ export default function ProductsPage() {
         await api.post('/products', { ...formData, imageUrl: finalImageUrl });
       }
 
-      fetchProducts();
+      await fetchProducts();
       setIsProductModalOpen(false);
     } catch (err) {
       console.error('Product save failed', err);
@@ -255,7 +258,7 @@ export default function ProductsPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Stock Inventory Qty</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Total Target Stock Qty</label>
             <input
               type="number"
               required
