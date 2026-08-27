@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useStoreSettings, defaultStoreSettings } from '@/context/StoreSettingsContext';
+import { useToast } from '@/context/ToastContext';
 import { Store, Tag, MapPin, FileText, Phone, HeartHandshake, ShieldAlert, Sparkles, Save, CheckCircle2 } from 'lucide-react';
 
 export default function SettingsPage() {
   const { settings, updateSettings, resetSettings } = useStoreSettings();
+  const { toast } = useToast();
   const [formData, setFormData] = useState(settings);
   const [isSavedAlert, setIsSavedAlert] = useState(false);
 
@@ -19,16 +21,32 @@ export default function SettingsPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateSettings(formData);
-    setIsSavedAlert(true);
-    setTimeout(() => setIsSavedAlert(false), 3000);
+    try {
+      if (!formData.storeName.trim()) {
+        toast.error('Store name cannot be empty');
+        return;
+      }
+      updateSettings(formData);
+      setIsSavedAlert(true);
+      toast.success('Store settings saved successfully!');
+      setTimeout(() => setIsSavedAlert(false), 3000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to save store settings';
+      toast.error(msg);
+    }
   };
 
   const handleReset = () => {
-    resetSettings();
-    setFormData(defaultStoreSettings);
-    setIsSavedAlert(true);
-    setTimeout(() => setIsSavedAlert(false), 3000);
+    try {
+      resetSettings();
+      setFormData(defaultStoreSettings);
+      setIsSavedAlert(true);
+      toast.info('Store settings reset to defaults');
+      setTimeout(() => setIsSavedAlert(false), 3000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to reset store settings';
+      toast.error(msg);
+    }
   };
 
   return (

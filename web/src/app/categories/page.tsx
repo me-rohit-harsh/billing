@@ -7,6 +7,7 @@ import { Tags, Plus, Edit, Trash2, Package, ArrowRight, AlertCircle, CheckCircle
 import { api, Product } from '@/lib/api';
 import { FormModal } from '@/components/shared/FormModal';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
+import { useToast } from '@/context/ToastContext';
 
 interface CategoryItem {
   _id: string;
@@ -15,6 +16,7 @@ interface CategoryItem {
 
 export default function CategoriesPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,21 +52,28 @@ export default function CategoriesPage() {
 
   const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!categoryNameInput.trim()) return;
+    if (!categoryNameInput.trim()) {
+      toast.error('Category name cannot be empty');
+      return;
+    }
 
     setCategoryError(null);
     try {
       if (editingCategory) {
         await api.put(`/categories/${editingCategory._id}`, { name: categoryNameInput.trim() });
+        toast.success(`Category '${categoryNameInput.trim()}' updated successfully!`);
       } else {
         await api.post('/categories', { name: categoryNameInput.trim() });
+        toast.success(`Category '${categoryNameInput.trim()}' created successfully!`);
       }
       await fetchData();
       setIsCategoryFormOpen(false);
       setCategoryNameInput('');
       setEditingCategory(null);
     } catch (err: any) {
-      setCategoryError(err?.response?.data?.message || 'Failed to save category');
+      const errMsg = err?.response?.data?.message || 'Failed to save category';
+      setCategoryError(errMsg);
+      toast.error(errMsg);
     }
   };
 
@@ -74,16 +83,21 @@ export default function CategoriesPage() {
 
     const mappedCount = products.filter((p) => p.category === deleteConfirmTarget.name).length;
     if (mappedCount > 0) {
-      setCategoryError(`Cannot delete category "${deleteConfirmTarget.name}" because ${mappedCount} product(s) are assigned to it.`);
+      const msg = `Cannot delete category "${deleteConfirmTarget.name}" because ${mappedCount} product(s) are assigned to it.`;
+      setCategoryError(msg);
+      toast.error(msg);
       setDeleteConfirmTarget(null);
       return;
     }
 
     try {
       await api.delete(`/categories/${deleteConfirmTarget._id}`);
+      toast.success(`Category deleted successfully`);
       await fetchData();
     } catch (err: any) {
-      setCategoryError(err?.response?.data?.message || 'Delete failed');
+      const errMsg = err?.response?.data?.message || 'Delete failed';
+      setCategoryError(errMsg);
+      toast.error(errMsg);
     } finally {
       setDeleteConfirmTarget(null);
     }

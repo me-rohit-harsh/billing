@@ -8,6 +8,7 @@ import { FormModal } from '@/components/shared/FormModal';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import { TableFilter } from '@/components/shared/TableFilter';
 import { CustomDropdown } from '@/components/shared/CustomDropdown';
+import { useToast } from '@/context/ToastContext';
 
 interface StockLog {
   _id: string;
@@ -27,6 +28,7 @@ interface CategoryItem {
 function ProductsContent() {
   const searchParams = useSearchParams();
   const initialCategoryParam = searchParams ? searchParams.get('category') || '' : '';
+  const { toast } = useToast();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -97,21 +99,28 @@ function ProductsContent() {
 
   const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!categoryNameInput.trim()) return;
+    if (!categoryNameInput.trim()) {
+      toast.error('Category name cannot be empty');
+      return;
+    }
 
     try {
       setCategoryError(null);
       if (editingCategory) {
         await api.put(`/categories/${editingCategory._id}`, { name: categoryNameInput.trim() });
+        toast.success(`Category '${categoryNameInput.trim()}' updated!`);
       } else {
         await api.post('/categories', { name: categoryNameInput.trim() });
+        toast.success(`Category '${categoryNameInput.trim()}' created!`);
       }
       await fetchCategories();
       setIsCategoryFormOpen(false);
       setCategoryNameInput('');
       setEditingCategory(null);
     } catch (err: any) {
-      setCategoryError(err?.response?.data?.message || 'Failed to save category');
+      const msg = err?.response?.data?.message || 'Failed to save category';
+      setCategoryError(msg);
+      toast.error(msg);
     }
   };
 
@@ -122,21 +131,27 @@ function ProductsContent() {
     try {
       if (deleteConfirmTarget.type === 'PRODUCT') {
         await api.delete(`/products/${deleteConfirmTarget.id}`);
+        toast.success(`Product '${deleteConfirmTarget.name}' deleted`);
         await fetchProducts();
       } else if (deleteConfirmTarget.type === 'CATEGORY') {
         // Pre-check mapped products count
         const count = products.filter((p) => p.category === deleteConfirmTarget.name).length;
         if (count > 0) {
-          setCategoryError(`Cannot delete "${deleteConfirmTarget.name}" category because ${count} product(s) are currently assigned to it.`);
+          const msg = `Cannot delete "${deleteConfirmTarget.name}" category because ${count} product(s) are currently assigned to it.`;
+          setCategoryError(msg);
+          toast.error(msg);
           setDeleteConfirmTarget(null);
           return;
         }
 
         await api.delete(`/categories/${deleteConfirmTarget.id}`);
+        toast.success(`Category '${deleteConfirmTarget.name}' deleted`);
         await fetchCategories();
       }
     } catch (err: any) {
-      setCategoryError(err?.response?.data?.message || 'Delete failed');
+      const msg = err?.response?.data?.message || 'Delete failed';
+      setCategoryError(msg);
+      toast.error(msg);
     } finally {
       setDeleteConfirmTarget(null);
     }
@@ -221,14 +236,17 @@ function ProductsContent() {
             reason: `Manual Stock Edit in Product Manager`,
           });
         }
+        toast.success(`Product '${formData.name}' updated successfully!`);
       } else {
         await api.post('/products', { ...formData, imageUrl: finalImageUrl });
+        toast.success(`Product '${formData.name}' created successfully!`);
       }
 
       await fetchProducts();
       setIsProductModalOpen(false);
-    } catch (err) {
-      console.error('Product save failed', err);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Product save failed';
+      toast.error(msg);
     }
   };
 

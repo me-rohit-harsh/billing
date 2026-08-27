@@ -6,8 +6,10 @@ import { api, Customer } from '@/lib/api';
 import { FormModal } from '@/components/shared/FormModal';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import { TableFilter } from '@/components/shared/TableFilter';
+import { useToast } from '@/context/ToastContext';
 
 export default function CustomersPage() {
+  const { toast } = useToast();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
@@ -32,11 +34,13 @@ export default function CustomersPage() {
     e.preventDefault();
     try {
       await api.post('/customers', newCustomer);
+      toast.success(`Customer '${newCustomer.name}' created successfully!`);
       fetchCustomers();
       setIsModalOpen(false);
       setNewCustomer({ name: '', phone: '', email: '', address: '' });
-    } catch (err) {
-      console.error('Customer save failed', err);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Customer save failed';
+      toast.error(msg);
     }
   };
 
@@ -44,9 +48,11 @@ export default function CustomersPage() {
     if (!deleteConfirmTarget) return;
     try {
       await api.delete(`/customers/${deleteConfirmTarget._id}`);
+      toast.success(`Customer deleted successfully`);
       fetchCustomers();
-    } catch (err) {
-      console.error('Delete customer failed', err);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Delete customer failed';
+      toast.error(msg);
     } finally {
       setDeleteConfirmTarget(null);
     }

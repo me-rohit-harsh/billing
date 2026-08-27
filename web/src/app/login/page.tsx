@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import { Lock, User, LogIn, AlertCircle, Sparkles, Wrench, ShieldCheck } from 'lucide-react';
 
 export default function LoginPage() {
@@ -12,6 +13,7 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { login } = useAuth();
+  const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect') || '/';
@@ -20,6 +22,7 @@ export default function LoginPage() {
     e.preventDefault();
     if (!username || !password) {
       setError('Please enter both username and password');
+      toast.error('Please enter both username and password');
       return;
     }
 
@@ -28,9 +31,12 @@ export default function LoginPage() {
 
     try {
       await login(username, password);
+      toast.success('Logged in successfully!');
       router.push(redirect);
     } catch (err: any) {
-      setError(err?.response?.data?.message || 'Invalid username or password');
+      const errMsg = err?.response?.data?.message || 'Invalid username or password';
+      setError(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsSubmitting(false);
     }

@@ -6,9 +6,11 @@ import { api, Product, Customer, Invoice } from '@/lib/api';
 import { TableFilter } from '@/components/shared/TableFilter';
 import { CustomDropdown } from '@/components/shared/CustomDropdown';
 import { useStoreSettings } from '@/context/StoreSettingsContext';
+import { useToast } from '@/context/ToastContext';
 
 export default function POSPage() {
   const { settings } = useStoreSettings();
+  const { toast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [cart, setCart] = useState<(Product & { qty: number })[]>([]);
@@ -165,13 +167,16 @@ export default function POSPage() {
     try {
       const res = await api.post('/invoices', invoicePayload);
       setActiveReceipt(res.data);
+      toast.success(`Invoice #${res.data.invoiceNumber || ''} generated successfully!`);
       setCart([]);
       setDiscountValue(0);
       setCustName('');
       setCustPhone('');
       setSelectedCustomerId('');
     } catch {
-      setActiveReceipt({ ...invoicePayload, invoiceNumber: `INV-${Date.now().toString().slice(-5)}` });
+      const fallbackInv = `INV-${Date.now().toString().slice(-5)}`;
+      setActiveReceipt({ ...invoicePayload, invoiceNumber: fallbackInv });
+      toast.success(`Invoice #${fallbackInv} generated (Offline mode)`);
       setCart([]);
       setDiscountValue(0);
       setCustName('');

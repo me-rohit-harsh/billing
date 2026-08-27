@@ -5,6 +5,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { StoreSettingsProvider } from "@/context/StoreSettingsContext";
+import { ToastProvider } from "@/context/ToastContext";
 import { AuthGuard } from "@/components/AuthGuard";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -19,7 +20,9 @@ export default function RootLayout({
       <body className={`${inter.className} bg-slate-50 antialiased`}>
         <AuthProvider>
           <StoreSettingsProvider>
-            <AuthGuard>{children}</AuthGuard>
+            <ToastProvider>
+              <AuthGuard>{children}</AuthGuard>
+            </ToastProvider>
           </StoreSettingsProvider>
         </AuthProvider>
       </body>

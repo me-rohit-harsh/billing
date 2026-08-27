@@ -5,6 +5,7 @@ import { Boxes, AlertTriangle, ArrowUpRight, ArrowDownRight, RefreshCw, Plus } f
 import { api, Product } from '@/lib/api';
 import { FormModal } from '@/components/shared/FormModal';
 import { TableFilter } from '@/components/shared/TableFilter';
+import { useToast } from '@/context/ToastContext';
 
 interface StockLog {
   _id: string;
@@ -17,6 +18,7 @@ interface StockLog {
 }
 
 export default function InventoryPage() {
+  const { toast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
   const [stockLogs, setStockLogs] = useState<StockLog[]>([]);
@@ -59,12 +61,14 @@ export default function InventoryPage() {
         quantity: adjustQty,
         reason: adjustReason,
       });
+      toast.success(`Stock for '${selectedProduct.name}' adjusted successfully!`);
       setIsAdjustModalOpen(false);
       setSelectedProduct(null);
       setAdjustQty(0);
       fetchInventoryData();
-    } catch (err) {
-      console.error('Stock adjust error', err);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Stock adjustment failed';
+      toast.error(msg);
     }
   };
 
