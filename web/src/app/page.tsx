@@ -18,7 +18,7 @@ export default function POSPage() {
   const [isCartLoaded, setIsCartLoaded] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
-  
+
   // Optional Walk-in / Direct Customer details
   const [custName, setCustName] = useState<string>('');
   const [custPhone, setCustPhone] = useState<string>('');
@@ -30,6 +30,32 @@ export default function POSPage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [categories, setCategories] = useState<{ _id: string; name: string }[]>([]);
   const [activeReceipt, setActiveReceipt] = useState<Invoice | null>(null);
+
+  // POS Product Grid Columns Customization (3 / 4 / 5) with localStorage memory
+  const [gridCols, setGridCols] = useState<number>(3);
+
+  useEffect(() => {
+    try {
+      const savedCols = localStorage.getItem('pos_grid_cols');
+      if (savedCols) {
+        const parsed = parseInt(savedCols, 10);
+        if ([3, 4, 5].includes(parsed)) {
+          setGridCols(parsed);
+        }
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }, []);
+
+  const handleGridColsChange = (cols: number) => {
+    setGridCols(cols);
+    try {
+      localStorage.setItem('pos_grid_cols', String(cols));
+    } catch {
+      // Ignore storage errors
+    }
+  };
 
   const filteredProducts = products
     .filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase())))
@@ -175,7 +201,7 @@ export default function POSPage() {
 
   const cartSubtotal = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
   const cartTaxTotal = cart.reduce((acc, item) => acc + (item.price * item.qty * (item.taxRate || 0)) / 100, 0);
-  
+
   const calculatedDiscount = discountType === 'PERCENT'
     ? ((cartSubtotal + cartTaxTotal) * (discountValue || 0)) / 100
     : (discountValue || 0);
@@ -251,11 +277,18 @@ export default function POSPage() {
               setSelectedCategories(val ? [val] : []);
             }
           }}
+          gridCols={gridCols}
+          onGridColsChange={handleGridColsChange}
           onExport={handleExportPOS}
           exportLabel="Export POS Data"
           placeholder="Search products by name or category..."
         />
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className={`grid gap-4 transition-all duration-200 ${gridCols === 4
+            ? 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4'
+            : gridCols === 5
+              ? 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-5'
+              : 'grid-cols-2 sm:grid-cols-3'
+          }`}>
           {products
             .filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase())))
             .filter((p) => {
@@ -454,18 +487,16 @@ export default function POSPage() {
                 <button
                   type="button"
                   onClick={() => setDiscountType('FIXED')}
-                  className={`px-1.5 py-0.5 rounded transition-colors ${
-                    discountType === 'FIXED' ? 'bg-amber-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-                  }`}
+                  className={`px-1.5 py-0.5 rounded transition-colors ${discountType === 'FIXED' ? 'bg-amber-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+                    }`}
                 >
                   ₹ Flat
                 </button>
                 <button
                   type="button"
                   onClick={() => setDiscountType('PERCENT')}
-                  className={`px-1.5 py-0.5 rounded transition-colors ${
-                    discountType === 'PERCENT' ? 'bg-amber-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-                  }`}
+                  className={`px-1.5 py-0.5 rounded transition-colors ${discountType === 'PERCENT' ? 'bg-amber-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+                    }`}
                 >
                   % Off
                 </button>
@@ -504,11 +535,10 @@ export default function POSPage() {
                   key={mode}
                   type="button"
                   onClick={() => setPaymentMode(mode)}
-                  className={`py-1 text-[11px] font-black rounded-lg border transition-all cursor-pointer ${
-                    paymentMode === mode
+                  className={`py-1 text-[11px] font-black rounded-lg border transition-all cursor-pointer ${paymentMode === mode
                       ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
-                  }`}
+                    }`}
                 >
                   {mode}
                 </button>
@@ -716,18 +746,16 @@ export default function POSPage() {
                           <button
                             type="button"
                             onClick={() => setDiscountType('FIXED')}
-                            className={`px-2.5 py-1 rounded-md transition-colors ${
-                              discountType === 'FIXED' ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-200'
-                            }`}
+                            className={`px-2.5 py-1 rounded-md transition-colors ${discountType === 'FIXED' ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-200'
+                              }`}
                           >
                             ₹ Flat
                           </button>
                           <button
                             type="button"
                             onClick={() => setDiscountType('PERCENT')}
-                            className={`px-2.5 py-1 rounded-md transition-colors ${
-                              discountType === 'PERCENT' ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-200'
-                            }`}
+                            className={`px-2.5 py-1 rounded-md transition-colors ${discountType === 'PERCENT' ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-200'
+                              }`}
                           >
                             % Off
                           </button>
@@ -767,11 +795,10 @@ export default function POSPage() {
                           key={mode}
                           type="button"
                           onClick={() => setPaymentMode(mode)}
-                          className={`py-2 text-xs font-black rounded-xl border transition-all cursor-pointer ${
-                            paymentMode === mode
+                          className={`py-2 text-xs font-black rounded-xl border transition-all cursor-pointer ${paymentMode === mode
                               ? 'bg-slate-900 text-white border-slate-900 shadow-md'
                               : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-                          }`}
+                            }`}
                         >
                           {mode}
                         </button>
@@ -809,14 +836,14 @@ export default function POSPage() {
       {activeReceipt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4 font-mono text-slate-900 border border-slate-200 my-auto">
-            
+
             {/* Real POS Receipt Slip Content */}
             <div id="printable-receipt" className="space-y-3 bg-white text-black p-1 text-xs">
-              
+
               {/* Store Header */}
               <div className="text-center space-y-1">
                 <div className="font-extrabold text-base tracking-tight uppercase border-b border-black pb-1">
-                  🛠️ {settings.storeName || 'BUILDPRO HARDWARE STORE'}
+                  {settings.storeName || 'BUILDPRO HARDWARE STORE'}
                 </div>
                 {settings.tagline && (
                   <p className="text-[11px] font-medium leading-tight">
@@ -889,7 +916,7 @@ export default function POSPage() {
                   <span>Items Subtotal:</span>
                   <span>₹{activeReceipt.subtotal?.toFixed(2)}</span>
                 </div>
-                
+
                 {/* GST Tax Breakdown */}
                 {activeReceipt.taxTotal > 0 && (
                   <>

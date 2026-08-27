@@ -48,7 +48,7 @@ export function StoreSettingsModal({ isOpen, onClose }: StoreSettingsModalProps)
         <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-amber-600 flex items-center justify-center text-white font-bold">
-              🛠️
+
             </div>
             <div>
               <h3 className="font-extrabold text-base tracking-tight">Configure Store & Receipt Details</h3>

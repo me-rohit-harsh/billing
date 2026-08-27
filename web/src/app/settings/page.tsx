@@ -64,7 +64,7 @@ export default function SettingsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-amber-600 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-amber-600/20 shrink-0">
-            🛠️
+
           </div>
           <div>
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Configure Store & Receipt Details</h1>
@@ -95,7 +95,7 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Main Settings Form Pane */}
         <form onSubmit={handleSubmit} className="lg:col-span-7 space-y-6">
-          
+
           {/* Section 1: Store Branding */}
           <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
             <h3 className="font-extrabold text-slate-900 text-base border-b border-slate-100 pb-3 flex items-center gap-2">
@@ -246,7 +246,7 @@ export default function SettingsPage() {
             {/* Store Header */}
             <div className="text-center space-y-1">
               <div className="font-extrabold text-sm uppercase border-b border-black pb-1">
-                🛠️ {formData.storeName || 'BUILDPRO HARDWARE STORE'}
+                {formData.storeName || 'BUILDPRO HARDWARE STORE'}
               </div>
               {formData.tagline && (
                 <p className="text-[10px] font-medium leading-tight">

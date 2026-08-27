@@ -13,6 +13,8 @@ interface TableFilterProps {
   placeholder?: string;
   viewMode?: 'table' | 'grid';
   onViewModeChange?: (mode: 'table' | 'grid') => void;
+  gridCols?: number;
+  onGridColsChange?: (cols: number) => void;
   onExport?: () => void;
   exportLabel?: string;
   multiSelect?: boolean;
@@ -27,6 +29,8 @@ export function TableFilter({
   placeholder = 'Search...',
   viewMode,
   onViewModeChange,
+  gridCols,
+  onGridColsChange,
   onExport,
   exportLabel = 'Export CSV',
   multiSelect = true,
@@ -83,6 +87,29 @@ export function TableFilter({
                 clearable
               />
             )}
+          </div>
+        )}
+
+        {gridCols && onGridColsChange && (
+          <div className="h-10 flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0">
+            <span className="px-2 text-xs font-extrabold text-slate-600 hidden md:inline-flex items-center gap-1">
+              <LayoutGrid className="w-3.5 h-3.5 text-amber-600" /> Grid:
+            </span>
+            {[3, 4, 5].map((cols) => (
+              <button
+                key={cols}
+                type="button"
+                onClick={() => onGridColsChange(cols)}
+                className={`h-full px-2.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                  gridCols === cols
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+                title={`${cols} Columns View`}
+              >
+                {cols}
+              </button>
+            ))}
           </div>
         )}
 
