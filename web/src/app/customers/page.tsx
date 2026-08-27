@@ -7,6 +7,7 @@ import { api, Customer, Invoice } from '@/lib/api';
 import { FormModal } from '@/components/shared/FormModal';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import { TableFilter } from '@/components/shared/TableFilter';
+import { Pagination } from '@/components/shared/Pagination';
 import { useToast } from '@/context/ToastContext';
 import { exportToCSV } from '@/lib/exportUtils';
 
@@ -153,12 +154,25 @@ export default function CustomersPage() {
     }
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   const filteredCustomers = customers.filter(
     (c) =>
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (c.phone && c.phone.includes(searchQuery)) ||
       (c.email && c.email.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  const paginatedCustomers = filteredCustomers.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+  const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage) || 1;
 
   return (
     <div className="space-y-6">
@@ -216,7 +230,7 @@ export default function CustomersPage() {
                   </td>
                 </tr>
               ) : (
-                filteredCustomers.map((cust) => {
+                paginatedCustomers.map((cust) => {
                   const hasOrders = (cust.ordersCount || 0) > 0;
                   return (
                     <tr key={cust._id} className="hover:bg-slate-50/80">
@@ -274,7 +288,7 @@ export default function CustomersPage() {
       ) : (
         /* Customer Cards Grid View */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredCustomers.map((cust) => {
+          {paginatedCustomers.map((cust) => {
             const hasOrders = (cust.ordersCount || 0) > 0;
             return (
               <div key={cust._id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
@@ -353,50 +367,88 @@ export default function CustomersPage() {
         </div>
       )}
 
+      {/* Pagination Bar */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={(page) => setCurrentPage(page)}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={(items) => {
+          setItemsPerPage(items);
+          setCurrentPage(1);
+        }}
+        totalItems={filteredCustomers.length}
+      />
+
       <FormModal
         isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false);
           setEditingCustomer(null);
         }}
-        title={editingCustomer ? 'Edit Customer Details' : 'Add New Customer / Contractor'}
+        title={editingCustomer ? 'Edit Customer Details' : 'Add New Customer'}
+        description={
+          editingCustomer
+            ? `Update contact information and site location for ${editingCustomer.name}`
+            : 'Add a new client or contractor profile for fast billing & invoices'
+        }
+        icon={<Users className="w-5 h-5 text-amber-700" />}
         onSubmit={handleSaveCustomer}
+        submitLabel={editingCustomer ? 'Update Customer' : 'Create Customer'}
+        variant="amber"
+        maxWidth="lg"
       >
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1">Customer Name</label>
+          <label className="block text-xs font-extrabold text-slate-700 mb-1.5 uppercase tracking-wider">
+            Customer / Company Name
+          </label>
           <input
             type="text"
             required
             value={customerForm.name}
             onChange={(e) => setCustomerForm({ ...customerForm, name: e.target.value })}
-            className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-amber-500"
+            placeholder="e.g. Ramesh Hardware Supplies / Apex Builders"
+            className="w-full h-11 px-4 bg-slate-50/50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 focus:bg-white transition-all"
           />
         </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1">Phone Number</label>
-          <input
-            type="text"
-            value={customerForm.phone}
-            onChange={(e) => setCustomerForm({ ...customerForm, phone: e.target.value })}
-            className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-amber-500"
-          />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-extrabold text-slate-700 mb-1.5 uppercase tracking-wider">
+              Phone Number
+            </label>
+            <input
+              type="text"
+              value={customerForm.phone}
+              onChange={(e) => setCustomerForm({ ...customerForm, phone: e.target.value })}
+              placeholder="e.g. +91 98765 43210"
+              className="w-full h-11 px-4 bg-slate-50/50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 focus:bg-white transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-extrabold text-slate-700 mb-1.5 uppercase tracking-wider">
+              Email Address
+            </label>
+            <input
+              type="email"
+              value={customerForm.email}
+              onChange={(e) => setCustomerForm({ ...customerForm, email: e.target.value })}
+              placeholder="e.g. customer@example.com"
+              className="w-full h-11 px-4 bg-slate-50/50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 focus:bg-white transition-all"
+            />
+          </div>
         </div>
+
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
-          <input
-            type="email"
-            value={customerForm.email}
-            onChange={(e) => setCustomerForm({ ...customerForm, email: e.target.value })}
-            className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-amber-500"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1">Address / Site Location</label>
+          <label className="block text-xs font-extrabold text-slate-700 mb-1.5 uppercase tracking-wider">
+            Address / Site Location
+          </label>
           <input
             type="text"
             value={customerForm.address}
             onChange={(e) => setCustomerForm({ ...customerForm, address: e.target.value })}
-            className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-amber-500"
+            placeholder="e.g. Shop #4, Market Road, Industrial Zone"
+            className="w-full h-11 px-4 bg-slate-50/50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 focus:bg-white transition-all"
           />
         </div>
       </FormModal>

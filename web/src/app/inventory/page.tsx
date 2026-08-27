@@ -6,6 +6,7 @@ import { Boxes, AlertTriangle, ArrowUpRight, ArrowDownRight, RefreshCw, Plus, Do
 import { api, Product } from '@/lib/api';
 import { FormModal } from '@/components/shared/FormModal';
 import { TableFilter } from '@/components/shared/TableFilter';
+import { Pagination } from '@/components/shared/Pagination';
 import { useToast } from '@/context/ToastContext';
 import { useStoreSettings } from '@/context/StoreSettingsContext';
 import { exportToCSV } from '@/lib/exportUtils';
@@ -171,11 +172,18 @@ function InventoryContent() {
     }
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, onlyLowStock]);
+
   const filteredProducts = products.filter((p) => {
     const matchesSearch =
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase()));
+      (p.barcode && p.barcode.toLowerCase().includes(searchQuery.toLowerCase()));
 
     if (!matchesSearch) return false;
 
@@ -186,6 +194,12 @@ function InventoryContent() {
 
     return true;
   });
+
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
 
   return (
     <div className="space-y-6">
@@ -312,7 +326,7 @@ function InventoryContent() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm font-semibold text-slate-700">
-              {filteredProducts.map((prod) => (
+              {paginatedProducts.map((prod) => (
                 <tr key={prod._id} className="hover:bg-slate-50/80">
                   <td className="p-4 font-bold text-slate-900">{prod.name}</td>
                   <td className="p-4 font-mono text-xs text-slate-500">{prod.sku || prod.barcode || 'N/A'}</td>
@@ -351,7 +365,7 @@ function InventoryContent() {
       ) : (
         /* Inventory Card Grid View */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProducts.map((prod) => {
+          {paginatedProducts.map((prod) => {
             const threshold = prod.minStockAlert && prod.minStockAlert > 0 ? prod.minStockAlert : (settings.defaultLowStockThreshold ?? 10);
             const isLow = prod.stock <= threshold;
 
@@ -394,6 +408,19 @@ function InventoryContent() {
           })}
         </div>
       )}
+
+      {/* Pagination Bar */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={(page) => setCurrentPage(page)}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={(items) => {
+          setItemsPerPage(items);
+          setCurrentPage(1);
+        }}
+        totalItems={filteredProducts.length}
+      />
 
       {/* Audit Log Table */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
@@ -453,52 +480,70 @@ function InventoryContent() {
       <FormModal
         isOpen={isAdjustModalOpen}
         onClose={() => setIsAdjustModalOpen(false)}
-        title={`Adjust Stock - ${selectedProduct?.name}`}
+        title={`Adjust Stock Level`}
+        description={selectedProduct ? `Update inventory units for "${selectedProduct.name}"` : 'Adjust stock levels and log inventory changes'}
+        icon={<Boxes className="w-5 h-5 text-amber-700" />}
         onSubmit={handleStockAdjustment}
+        submitLabel="Save Adjustment"
+        variant="amber"
+        maxWidth="md"
       >
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1">Adjustment Type</label>
-          <div className="flex gap-2">
+          <label className="block text-xs font-extrabold text-slate-700 mb-1.5 uppercase tracking-wider">
+            Adjustment Type
+          </label>
+          <div className="flex gap-2.5">
             <button
               type="button"
               onClick={() => setAdjustType('IN')}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
-                adjustType === 'IN' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 text-slate-600 border-slate-200'
+              className={`flex-1 h-11 rounded-xl text-xs font-extrabold border transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs ${
+                adjustType === 'IN'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-emerald-600/20'
+                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
               }`}
             >
-              + Stock In (Add)
+              <ArrowDownRight className="w-4 h-4" /> + Stock In (Add)
             </button>
             <button
               type="button"
               onClick={() => setAdjustType('OUT')}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
-                adjustType === 'OUT' ? 'bg-rose-600 text-white border-rose-600' : 'bg-slate-50 text-slate-600 border-slate-200'
+              className={`flex-1 h-11 rounded-xl text-xs font-extrabold border transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs ${
+                adjustType === 'OUT'
+                  ? 'bg-rose-600 text-white border-rose-600 shadow-rose-600/20'
+                  : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
               }`}
             >
-              - Stock Out (Remove)
+              <ArrowUpRight className="w-4 h-4" /> - Stock Out (Remove)
             </button>
           </div>
         </div>
+
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1">Quantity</label>
+          <label className="block text-xs font-extrabold text-slate-700 mb-1.5 uppercase tracking-wider">
+            Quantity (Units)
+          </label>
           <input
             type="number"
             required
             min="1"
             value={adjustQty}
             onChange={(e) => setAdjustQty(Number(e.target.value))}
-            className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500"
+            placeholder="e.g. 10"
+            className="w-full h-11 px-4 bg-slate-50/50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 focus:bg-white transition-all"
           />
         </div>
+
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1">Reason / Notes</label>
+          <label className="block text-xs font-extrabold text-slate-700 mb-1.5 uppercase tracking-wider">
+            Reason / Audit Notes
+          </label>
           <input
             type="text"
             required
             value={adjustReason}
             onChange={(e) => setAdjustReason(e.target.value)}
-            placeholder="e.g. Supplier Shipment / Damaged Stock"
-            className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500"
+            placeholder="e.g. New Supplier Shipment / Damaged Stock"
+            className="w-full h-11 px-4 bg-slate-50/50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 focus:bg-white transition-all"
           />
         </div>
       </FormModal>

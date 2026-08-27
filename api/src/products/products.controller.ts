@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Put, Delete, UseInterceptors, UploadedFile, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Delete, UseInterceptors, UploadedFile, UseGuards, Query } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { InjectModel } from '@nestjs/mongoose';
@@ -17,7 +17,42 @@ export class ProductsController {
   ) {}
 
   @Get()
-  async findAll() {
+  async findAll(
+    @Query('page') pageStr?: string,
+    @Query('limit') limitStr?: string,
+    @Query('search') search?: string,
+    @Query('category') category?: string,
+  ) {
+    if (pageStr || limitStr) {
+      const page = Math.max(1, parseInt(pageStr || '1', 10));
+      const limit = Math.max(1, parseInt(limitStr || '10', 10));
+      const skip = (page - 1) * limit;
+
+      const filter: any = {};
+      if (search) {
+        filter.$or = [
+          { name: { $regex: search, $options: 'i' } },
+          { sku: { $regex: search, $options: 'i' } },
+          { category: { $regex: search, $options: 'i' } },
+        ];
+      }
+      if (category && category !== 'all' && category !== 'All Categories') {
+        filter.category = category;
+      }
+
+      const [data, total] = await Promise.all([
+        this.productModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).exec(),
+        this.productModel.countDocuments(filter).exec(),
+      ]);
+
+      return {
+        data,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit) || 1,
+      };
+    }
     return this.productModel.find().sort({ createdAt: -1 }).exec();
   }
 

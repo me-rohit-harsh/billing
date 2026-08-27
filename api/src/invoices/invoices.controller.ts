@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -16,7 +16,42 @@ export class InvoicesController {
   ) {}
 
   @Get()
-  async findAll() {
+  async findAll(
+    @Query('page') pageStr?: string,
+    @Query('limit') limitStr?: string,
+    @Query('search') search?: string,
+    @Query('customer') customer?: string,
+  ) {
+    if (pageStr || limitStr) {
+      const page = Math.max(1, parseInt(pageStr || '1', 10));
+      const limit = Math.max(1, parseInt(limitStr || '10', 10));
+      const skip = (page - 1) * limit;
+
+      const filter: any = {};
+      if (search) {
+        filter.$or = [
+          { invoiceNumber: { $regex: search, $options: 'i' } },
+          { customerName: { $regex: search, $options: 'i' } },
+          { paymentMode: { $regex: search, $options: 'i' } },
+        ];
+      }
+      if (customer) {
+        filter.customerName = { $regex: customer, $options: 'i' };
+      }
+
+      const [data, total] = await Promise.all([
+        this.invoiceModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).exec(),
+        this.invoiceModel.countDocuments(filter).exec(),
+      ]);
+
+      return {
+        data,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit) || 1,
+      };
+    }
     return this.invoiceModel.find().sort({ createdAt: -1 }).exec();
   }
 

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Printer, Receipt, FileText, Download } from 'lucide-react';
 import { api, Invoice, Customer } from '@/lib/api';
 import { TableFilter } from '@/components/shared/TableFilter';
+import { Pagination } from '@/components/shared/Pagination';
 import { useStoreSettings } from '@/context/StoreSettingsContext';
 import { useToast } from '@/context/ToastContext';
 import { exportToCSV } from '@/lib/exportUtils';
@@ -107,6 +108,12 @@ export default function InvoicesPage() {
     { _id: 'Walk-in Customer (Guest)', name: 'Walk-in Customer (Guest)' },
     ...customers.map((c) => ({ _id: c.name, name: c.name })),
   ];
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCustomer, dateRange]);
 
   const filteredInvoices = invoices.filter((inv) => {
     const matchesSearch =
@@ -141,6 +148,12 @@ export default function InvoicesPage() {
 
     return matchesSearch && matchesCustomer && matchesDate;
   });
+
+  const paginatedInvoices = filteredInvoices.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+  const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage) || 1;
 
   const getPaymentModeBadge = (mode?: string) => {
     switch (mode) {
@@ -253,7 +266,7 @@ export default function InvoicesPage() {
                   </td>
                 </tr>
               ) : (
-                filteredInvoices.map((inv) => (
+                paginatedInvoices.map((inv) => (
                   <tr key={inv._id || inv.invoiceNumber} className="hover:bg-slate-50/80">
                     <td className="p-4 font-mono font-bold text-amber-700">{inv.invoiceNumber}</td>
                     <td className="p-4 font-bold text-slate-900">{inv.customerName || 'Walk-in Customer'}</td>
@@ -283,7 +296,7 @@ export default function InvoicesPage() {
       ) : (
         /* Compact Clean Invoice Cards Grid View */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredInvoices.map((inv) => (
+          {paginatedInvoices.map((inv) => (
             <div
               key={inv._id || inv.invoiceNumber}
               className="bg-white border border-slate-200 hover:border-amber-400 rounded-3xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
@@ -320,6 +333,19 @@ export default function InvoicesPage() {
           ))}
         </div>
       )}
+
+      {/* Pagination Bar */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={(page) => setCurrentPage(page)}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={(items) => {
+          setItemsPerPage(items);
+          setCurrentPage(1);
+        }}
+        totalItems={filteredInvoices.length}
+      />
 
       {activeReceipt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">

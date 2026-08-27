@@ -8,6 +8,7 @@ import { api, Product } from '@/lib/api';
 import { FormModal } from '@/components/shared/FormModal';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import { TableFilter } from '@/components/shared/TableFilter';
+import { Pagination } from '@/components/shared/Pagination';
 import { useToast } from '@/context/ToastContext';
 import { exportToCSV } from '@/lib/exportUtils';
 
@@ -165,9 +166,22 @@ export default function CategoriesPage() {
     setIsCategoryFormOpen(true);
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   const filteredCategories = categories.filter((cat) =>
     cat.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const paginatedCategories = filteredCategories.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage) || 1;
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -260,7 +274,7 @@ export default function CategoriesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm font-semibold text-slate-700">
-              {filteredCategories.map((cat) => {
+              {paginatedCategories.map((cat) => {
                 const mappedProducts = products.filter((p) => p.category === cat.name);
                 const mappedCount = mappedProducts.length;
 
@@ -321,7 +335,7 @@ export default function CategoriesPage() {
       ) : (
         /* Categories Cards Grid View */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredCategories.map((cat) => {
+          {paginatedCategories.map((cat) => {
             const mappedProducts = products.filter((p) => p.category === cat.name);
             const mappedCount = mappedProducts.length;
 
@@ -356,23 +370,23 @@ export default function CategoriesPage() {
                         }}
                         className={`w-9 h-9 border rounded-xl flex items-center justify-center transition-colors cursor-pointer ${
                           mappedCount > 0
-                            ? 'border-slate-200 text-slate-300 bg-slate-50'
-                            : 'border-slate-200 text-rose-600 hover:bg-rose-50'
+                            ? 'border-slate-200 text-slate-300 bg-slate-50 cursor-not-allowed'
+                            : 'border-slate-200 text-slate-600 hover:bg-slate-100'
                         }`}
                         title={mappedCount > 0 ? `Cannot delete: ${mappedCount} product(s) mapped` : 'Delete Category'}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className={`w-4 h-4 ${mappedCount > 0 ? 'text-slate-300' : 'text-rose-500'}`} />
                       </button>
                     </div>
                   </div>
 
-                  <h3 className="font-extrabold text-slate-900 text-lg group-hover:text-amber-700 transition-colors truncate">
+                  <h3 className="font-extrabold text-slate-900 text-lg group-hover:text-amber-700 transition-colors">
                     {cat.name}
                   </h3>
                   
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="px-3 py-1 bg-amber-100/80 text-amber-800 rounded-full font-bold text-xs">
-                      {mappedCount} {mappedCount === 1 ? 'Product' : 'Products'} Assigned
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-bold">
+                      {mappedCount} {mappedCount === 1 ? 'Product Assigned' : 'Products Assigned'}
                     </span>
                   </div>
                 </div>
@@ -392,16 +406,36 @@ export default function CategoriesPage() {
         </div>
       )}
 
+      {/* Pagination Bar */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={(page) => setCurrentPage(page)}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={(items) => {
+          setItemsPerPage(items);
+          setCurrentPage(1);
+        }}
+        totalItems={filteredCategories.length}
+      />
+
       {/* Add / Edit Category FormModal */}
       <FormModal
         isOpen={isCategoryFormOpen}
         onClose={() => setIsCategoryFormOpen(false)}
-        title={editingCategory ? `Rename Category: ${editingCategory.name}` : 'Add New Category'}
+        title={editingCategory ? `Rename Category` : 'Add New Category'}
+        description={
+          editingCategory
+            ? `Update the display name for category "${editingCategory.name}"`
+            : 'Create a new product grouping for your store catalog'
+        }
+        icon={<Tags className="w-5 h-5 text-amber-700" />}
         onSubmit={handleSaveCategory}
         submitLabel={editingCategory ? 'Update Category' : 'Create Category'}
+        variant="amber"
       >
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wider">
+          <label className="block text-xs font-extrabold text-slate-700 mb-1.5 uppercase tracking-wider">
             Category Name
           </label>
           <input
@@ -410,8 +444,11 @@ export default function CategoriesPage() {
             value={categoryNameInput}
             onChange={(e) => setCategoryNameInput(e.target.value)}
             placeholder="e.g. Hand Tools, Safety Gear, Plumbing"
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full h-11 px-4 bg-slate-50/50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 focus:bg-white transition-all"
           />
+          <p className="text-xs text-slate-500 mt-1.5 font-medium">
+            Categories help organize catalog items for billing, inventory, and fast searching.
+          </p>
         </div>
       </FormModal>
 
