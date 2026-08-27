@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   TrendingUp,
   DollarSign,
@@ -64,6 +65,7 @@ interface DashboardData {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<string>('30d');
@@ -332,7 +334,7 @@ ${dashboardStats.topProducts.length > 0 ? dashboardStats.topProducts.map((p, i) 
         <div className="flex-1 min-w-0">
           
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 mt-1.5 tracking-tight">Executive Sales & Store Dashboard</h1>
-          <p className="text-xs sm:text-sm font-medium text-slate-500 mt-0.5">
+          <p className="text-slate-500 text-sm font-medium mt-0.5">
             Real-time business performance, interactive revenue graphs, inventory health, and payment breakdowns.
           </p>
         </div>
@@ -381,19 +383,25 @@ ${dashboardStats.topProducts.length > 0 ? dashboardStats.topProducts.map((p, i) 
       {/* KPI Metric Summary Cards (Card Form Grid) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Card 1: Total Sales Revenue */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-amber-300 transition-all">
+        <div
+          onClick={() => router.push(`/invoices?range=${timeRange}`)}
+          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-amber-400 hover:shadow-md transition-all cursor-pointer"
+          title={`Click to view invoices for ${timeRangeOptions.find(t => t._id === timeRange)?.name}`}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Revenue</span>
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold shadow-xs group-hover:bg-amber-600 group-hover:text-white transition-colors">
               <DollarSign className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
-            <h2 className="text-2xl font-black text-slate-900">
+            <h2 className="text-2xl font-black text-slate-900 group-hover:text-amber-700 transition-colors">
               ₹{dashboardStats.kpi.totalRevenue.toLocaleString()}
             </h2>
             <div className="flex items-center gap-1.5 mt-2">
-              <span className="text-xs text-slate-400 font-medium">Selected Date Range</span>
+              <span className="text-xs text-amber-600 font-semibold underline">
+                View {timeRangeOptions.find(t => t._id === timeRange)?.name} Invoices →
+              </span>
             </div>
           </div>
           <div className="w-full bg-slate-100 h-1.5 rounded-full mt-4 overflow-hidden">
@@ -402,18 +410,24 @@ ${dashboardStats.topProducts.length > 0 ? dashboardStats.topProducts.map((p, i) 
         </div>
 
         {/* Card 2: Invoices & AOV */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-blue-300 transition-all">
+        <div
+          onClick={() => router.push(`/invoices?range=${timeRange}`)}
+          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
+          title={`Click to view invoices for ${timeRangeOptions.find(t => t._id === timeRange)?.name}`}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Orders Count</span>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shadow-xs group-hover:bg-blue-600 group-hover:text-white transition-colors">
               <Receipt className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
-            <h2 className="text-2xl font-black text-slate-900">{dashboardStats.kpi.totalInvoices} Invoices</h2>
+            <h2 className="text-2xl font-black text-slate-900 group-hover:text-blue-700 transition-colors">
+              {dashboardStats.kpi.totalInvoices} Invoices
+            </h2>
             <div className="flex items-center gap-1.5 mt-2">
-              <span className="text-xs text-slate-600 font-semibold">
-                Avg Order: <strong className="text-slate-900">₹{dashboardStats.kpi.averageOrderValue.toLocaleString()}</strong>
+              <span className="text-xs text-blue-600 font-semibold underline">
+                Avg Order: ₹{dashboardStats.kpi.averageOrderValue.toLocaleString()} →
               </span>
             </div>
           </div>
@@ -423,20 +437,24 @@ ${dashboardStats.topProducts.length > 0 ? dashboardStats.topProducts.map((p, i) 
         </div>
 
         {/* Card 3: Inventory Valuation */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition-all">
+        <div
+          onClick={() => router.push('/inventory')}
+          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer"
+          title="Click to view full inventory stock directory"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Inventory Assets</span>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shadow-xs group-hover:bg-emerald-600 group-hover:text-white transition-colors">
               <Boxes className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
-            <h2 className="text-2xl font-black text-slate-900">
+            <h2 className="text-2xl font-black text-slate-900 group-hover:text-emerald-700 transition-colors">
               ₹{dashboardStats.kpi.totalStockValuation.toLocaleString()}
             </h2>
             <div className="flex items-center gap-1.5 mt-2">
-              <span className="text-xs text-slate-500 font-medium">
-                {dashboardStats.kpi.totalStockUnits} units ({dashboardStats.kpi.totalProductsCount} SKUs)
+              <span className="text-xs text-emerald-600 font-semibold underline">
+                {dashboardStats.kpi.totalStockUnits} units ({dashboardStats.kpi.totalProductsCount} SKUs) →
               </span>
             </div>
           </div>
@@ -446,20 +464,24 @@ ${dashboardStats.topProducts.length > 0 ? dashboardStats.topProducts.map((p, i) 
         </div>
 
         {/* Card 4: Low Stock Alerts */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-rose-300 transition-all">
+        <div
+          onClick={() => router.push('/inventory?filter=low_stock')}
+          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-rose-400 hover:shadow-md transition-all cursor-pointer"
+          title="Click to view low stock inventory items"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Stock Alerts</span>
-            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold shadow-xs group-hover:bg-rose-600 group-hover:text-white transition-colors">
               <AlertTriangle className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
-            <h2 className="text-2xl font-black text-slate-900">
+            <h2 className="text-2xl font-black text-slate-900 group-hover:text-rose-700 transition-colors">
               {dashboardStats.kpi.lowStockCount} Items Low
             </h2>
             <div className="flex items-center gap-1.5 mt-2">
-              <span className="inline-flex items-center gap-0.5 text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md">
-                Reorder Required
+              <span className="inline-flex items-center gap-0.5 text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md underline">
+                Reorder Required →
               </span>
             </div>
           </div>
@@ -469,19 +491,25 @@ ${dashboardStats.topProducts.length > 0 ? dashboardStats.topProducts.map((p, i) 
         </div>
 
         {/* Card 5: GST Tax Revenue */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-purple-300 transition-all">
+        <div
+          onClick={() => router.push(`/invoices?range=${timeRange}`)}
+          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-purple-400 hover:shadow-md transition-all cursor-pointer"
+          title={`Click to view tax invoices for ${timeRangeOptions.find(t => t._id === timeRange)?.name}`}
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">GST Tax Output</span>
-            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold shadow-xs">
+            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold shadow-xs group-hover:bg-purple-600 group-hover:text-white transition-colors">
               <ShieldCheck className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
-            <h2 className="text-2xl font-black text-slate-900">
+            <h2 className="text-2xl font-black text-slate-900 group-hover:text-purple-700 transition-colors">
               ₹{dashboardStats.kpi.totalTax.toLocaleString()}
             </h2>
             <div className="flex items-center gap-1.5 mt-2">
-              <span className="text-xs text-slate-500 font-medium">Recorded Tax Output</span>
+              <span className="text-xs text-purple-600 font-semibold underline">
+                Tax Output ({timeRangeOptions.find(t => t._id === timeRange)?.name}) →
+              </span>
             </div>
           </div>
           <div className="w-full bg-slate-100 h-1.5 rounded-full mt-4 overflow-hidden">

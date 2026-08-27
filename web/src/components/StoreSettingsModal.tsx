@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useStoreSettings, defaultStoreSettings } from '@/context/StoreSettingsContext';
-import { Store, Tag, MapPin, FileText, Phone, HeartHandshake, ShieldAlert, Sparkles } from 'lucide-react';
+import { Store, Tag, MapPin, FileText, Phone, HeartHandshake, ShieldAlert, Sparkles, X } from 'lucide-react';
 
 interface StoreSettingsModalProps {
   isOpen: boolean;
@@ -48,7 +48,7 @@ export function StoreSettingsModal({ isOpen, onClose }: StoreSettingsModalProps)
         <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-amber-600 flex items-center justify-center text-white font-bold">
-
+              <Store className="w-5 h-5 text-white" />
             </div>
             <div>
               <h3 className="font-extrabold text-base tracking-tight">Configure Store & Receipt Details</h3>
@@ -58,9 +58,9 @@ export function StoreSettingsModal({ isOpen, onClose }: StoreSettingsModalProps)
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-white rounded-lg p-1.5 transition-colors font-bold text-base cursor-pointer"
+            className="text-slate-400 hover:text-white rounded-lg p-1.5 transition-colors font-bold text-base cursor-pointer flex items-center justify-center"
           >
-            ✕
+            <X className="w-5 h-5" />
           </button>
         </div>
 

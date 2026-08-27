@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import { X } from 'lucide-react';
 
 interface FormModalProps {
   isOpen: boolean;
@@ -47,9 +48,9 @@ export function FormModal({
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 rounded-lg p-1 transition-colors font-bold text-base"
+            className="text-slate-400 hover:text-slate-600 rounded-lg p-1 transition-colors font-bold text-base flex items-center justify-center cursor-pointer"
           >
-            ✕
+            <X className="w-5 h-5" />
           </button>
         </div>
         <form onSubmit={onSubmit} className="p-6 space-y-4">

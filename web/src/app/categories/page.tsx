@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Tags, Plus, Edit, Trash2, Package, ArrowRight, AlertCircle, CheckCircle2, Download } from 'lucide-react';
+import { Tags, Plus, Edit, Trash2, Package, ArrowRight, AlertCircle, CheckCircle2, Download, X } from 'lucide-react';
 import { api, Product } from '@/lib/api';
 import { FormModal } from '@/components/shared/FormModal';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
@@ -221,9 +221,9 @@ export default function CategoriesPage() {
           <button
             type="button"
             onClick={() => setCategoryError(null)}
-            className="font-bold text-rose-500 hover:text-rose-700 px-2 py-1 cursor-pointer"
+            className="font-bold text-rose-500 hover:text-rose-700 px-2 py-1 cursor-pointer flex items-center justify-center"
           >
-            ✕
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}

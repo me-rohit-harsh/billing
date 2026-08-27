@@ -46,6 +46,7 @@ export interface Product {
   price: number;
   taxRate: number;
   stock: number;
+  minStockAlert?: number;
   unit: string;
   imageUrl?: string;
 }

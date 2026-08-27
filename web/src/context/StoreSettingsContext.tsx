@@ -11,6 +11,8 @@ export interface StoreSettings {
   thankYouNote: string;
   returnPolicy: string;
   footerNote: string;
+  defaultLowStockThreshold: number;
+  logoUrl?: string;
 }
 
 export const defaultStoreSettings: StoreSettings = {
@@ -22,6 +24,8 @@ export const defaultStoreSettings: StoreSettings = {
   thankYouNote: 'Thank you for visiting BuildPro Hardware!',
   returnPolicy: 'Goods once sold can be exchanged within 7 days with valid receipt.',
   footerNote: '*** HAVE A GREAT DAY ***',
+  defaultLowStockThreshold: 10,
+  logoUrl: '',
 };
 
 interface StoreSettingsContextType {

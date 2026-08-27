@@ -24,7 +24,7 @@ export class ProductsController {
   @Get('low-stock')
   async findLowStock() {
     const products = await this.productModel.find({ isActive: true }).exec();
-    return products.filter((p) => p.stock <= (p.minStockAlert || 5));
+    return products.filter((p) => p.stock <= (p.minStockAlert !== undefined && p.minStockAlert !== null && p.minStockAlert > 0 ? p.minStockAlert : 10));
   }
 
   @Get('stock-logs')

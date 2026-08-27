@@ -18,6 +18,7 @@ import {
   Calendar,
   Layers,
   FileText,
+  Zap,
 } from 'lucide-react';
 
 interface BackupSettingsData {
@@ -193,7 +194,7 @@ export default function BackupSettingsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-amber-600 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-amber-600/20 shrink-0">
-            ☁️
+            <CloudUpload className="w-7 h-7 text-white" />
           </div>
           <div>
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Cloud Backup & Database Sync</h1>
@@ -283,8 +284,14 @@ export default function BackupSettingsPage() {
 
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
             <span className="text-xs text-slate-500 font-bold uppercase tracking-wider block">Auto Cloud Upload</span>
-            <span className={`text-base font-extrabold mt-1 block ${settings.autoCloudUpload ? 'text-emerald-600' : 'text-slate-400'}`}>
-              {settings.autoCloudUpload ? '⚡ Enabled' : 'Disabled'}
+            <span className={`text-base font-extrabold mt-1 flex items-center gap-1 ${settings.autoCloudUpload ? 'text-emerald-600' : 'text-slate-400'}`}>
+              {settings.autoCloudUpload ? (
+                <>
+                  <Zap className="w-4 h-4 text-emerald-500 inline" /> Enabled
+                </>
+              ) : (
+                'Disabled'
+              )}
             </span>
           </div>
         </div>

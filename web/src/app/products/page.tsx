@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Plus, Trash2, Package, Edit, History, ArrowDownRight, ArrowUpRight, FolderPlus, Tags, Download } from 'lucide-react';
+import { Plus, Trash2, Package, Edit, History, ArrowDownRight, ArrowUpRight, FolderPlus, Tags, Download, ShieldAlert, AlertTriangle, X } from 'lucide-react';
 import { api, Product } from '@/lib/api';
 import { FormModal } from '@/components/shared/FormModal';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import { TableFilter } from '@/components/shared/TableFilter';
 import { CustomDropdown } from '@/components/shared/CustomDropdown';
 import { useToast } from '@/context/ToastContext';
+import { useStoreSettings } from '@/context/StoreSettingsContext';
 import { exportToCSV } from '@/lib/exportUtils';
 
 interface StockLog {
@@ -30,6 +31,7 @@ function ProductsContent() {
   const searchParams = useSearchParams();
   const initialCategoryParam = searchParams ? searchParams.get('category') || '' : '';
   const { toast } = useToast();
+  const { settings } = useStoreSettings();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -63,6 +65,7 @@ function ProductsContent() {
     price: 0,
     costPrice: 0,
     stock: 10,
+    minStockAlert: 0,
     category: 'General',
     taxRate: 18,
     unit: 'pcs',
@@ -81,6 +84,21 @@ function ProductsContent() {
     fetchProducts();
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const editId = params.get('editProduct') || params.get('edit');
+      if (editId && products.length > 0) {
+        const prod = products.find((p) => p._id === editId);
+        if (prod) {
+          openEditModal(prod);
+        }
+      }
+    } catch {
+      // Ignore
+    }
+  }, [products]);
 
   const fetchCategories = async () => {
     try {
@@ -167,6 +185,7 @@ function ProductsContent() {
       price: 0,
       costPrice: 0,
       stock: 10,
+      minStockAlert: 0,
       category: categories.length > 0 ? categories[0].name : 'General',
       taxRate: 18,
       unit: 'pcs',
@@ -185,6 +204,7 @@ function ProductsContent() {
       price: product.price,
       costPrice: (product as any).costPrice || 0,
       stock: product.stock,
+      minStockAlert: product.minStockAlert || 0,
       category: product.category || 'General',
       taxRate: product.taxRate || 0,
       unit: product.unit || 'pcs',
@@ -393,11 +413,20 @@ function ProductsContent() {
                   <td className="p-4 font-bold text-slate-900">₹{prod.price}</td>
                   <td className="p-4">{prod.taxRate}%</td>
                   <td className="p-4">
-                    <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
-                      prod.stock <= 5 ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'
-                    }`}>
-                      {prod.stock} {prod.unit}
-                    </span>
+                    {(() => {
+                      const threshold = prod.minStockAlert && prod.minStockAlert > 0 ? prod.minStockAlert : (settings.defaultLowStockThreshold ?? 10);
+                      const isLow = prod.stock <= threshold;
+                      return (
+                        <span
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                            isLow ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-emerald-100 text-emerald-800'
+                          }`}
+                          title={isLow ? `Low Stock Warning! (Stock: ${prod.stock} <= Threshold: ${threshold})` : `Stock Level: ${prod.stock}`}
+                        >
+                          {prod.stock} {prod.unit} {isLow && <AlertTriangle className="w-3.5 h-3.5 text-amber-500 inline ml-1" />}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="p-4 text-right flex items-center justify-end gap-1.5">
                     <button
@@ -430,67 +459,75 @@ function ProductsContent() {
       ) : (
         /* Cards View Grid */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredProducts.map((prod) => (
-            <div key={prod._id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group">
-              <div>
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <div className="w-12 h-12 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-slate-200">
-                    {prod.imageUrl ? (
-                      <img src={`http://localhost:5000${prod.imageUrl}`} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <Package className="w-6 h-6 text-slate-400" />
-                    )}
-                  </div>
-                  <span className="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-full text-xs font-bold truncate">
-                    {prod.category || 'General'}
-                  </span>
-                </div>
+          {filteredProducts.map((prod) => {
+            const threshold = prod.minStockAlert && prod.minStockAlert > 0 ? prod.minStockAlert : (settings.defaultLowStockThreshold ?? 10);
+            const isLow = prod.stock <= threshold;
 
-                <h3 className="font-extrabold text-slate-900 text-base leading-snug group-hover:text-amber-700 transition-colors">
-                  {prod.name}
-                </h3>
-                <span className="text-xs text-slate-400 block mt-0.5 font-mono">SKU: {prod.sku || 'N/A'}</span>
-
-                <div className="mt-4 flex items-center justify-between pt-3 border-t border-slate-100">
-                  <div>
-                    <span className="text-xs text-slate-400 block font-medium">Price</span>
-                    <span className="text-lg font-black text-slate-900">₹{prod.price}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs text-slate-400 block font-medium">Stock</span>
-                    <span className={`px-2 py-0.5 rounded-md text-xs font-bold ${
-                      prod.stock <= 5 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-800'
-                    }`}>
-                      {prod.stock} {prod.unit}
+            return (
+              <div key={prod._id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group">
+                <div>
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="w-12 h-12 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-slate-200">
+                      {prod.imageUrl ? (
+                        <img src={`http://localhost:5000${prod.imageUrl}`} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <Package className="w-6 h-6 text-slate-400" />
+                      )}
+                    </div>
+                    <span className="px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-full text-xs font-bold truncate">
+                      {prod.category || 'General'}
                     </span>
                   </div>
+
+                  <h3 className="font-extrabold text-slate-900 text-base leading-snug group-hover:text-amber-700 transition-colors">
+                    {prod.name}
+                  </h3>
+                  <span className="text-xs text-slate-400 block mt-0.5 font-mono">SKU: {prod.sku || 'N/A'}</span>
+
+                  <div className="mt-4 flex items-center justify-between pt-3 border-t border-slate-100">
+                    <div>
+                      <span className="text-xs text-slate-400 block font-medium">Price</span>
+                      <span className="text-lg font-black text-slate-900">₹{prod.price}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs text-slate-400 block font-medium">Stock</span>
+                      <span
+                        className={`px-2 py-0.5 rounded-md text-xs font-bold ${
+                          isLow ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-emerald-100 text-emerald-800'
+                        }`}
+                        title={isLow ? `Low Stock Warning! (Stock: ${prod.stock} <= Threshold: ${threshold})` : `Stock Level: ${prod.stock}`}
+                      >
+                        {prod.stock} {prod.unit} {isLow && <AlertTriangle className="w-3.5 h-3.5 text-amber-500 inline ml-1" />}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-4 mt-4 border-t border-slate-100">
+                  <button
+                    onClick={() => openHistoryModal(prod)}
+                    className="flex-1 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <History className="w-3.5 h-3.5 text-amber-600" /> Audit Logs
+                  </button>
+                  <button
+                    onClick={() => openEditModal(prod)}
+                    className="p-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+                    title="Edit Product"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setDeleteConfirmTarget({ type: 'PRODUCT', id: prod._id, name: prod.name })}
+                    className="p-2 border border-slate-200 rounded-xl text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                    title="Delete Product"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-
-              <div className="flex items-center gap-2 pt-4 mt-4 border-t border-slate-100">
-                <button
-                  onClick={() => openHistoryModal(prod)}
-                  className="flex-1 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <History className="w-3.5 h-3.5 text-amber-600" /> Audit Logs
-                </button>
-                <button
-                  onClick={() => openEditModal(prod)}
-                  className="p-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
-                  title="Edit Product"
-                >
-                  <Edit className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setDeleteConfirmTarget({ type: 'PRODUCT', id: prod._id, name: prod.name })}
-                  className="p-2 border border-slate-200 rounded-xl text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                  title="Delete Product"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -569,6 +606,24 @@ function ProductsContent() {
         </div>
 
         <div>
+          <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+            <span>Low Stock Warning Threshold (pcs)</span>
+            <span className="text-[10px] text-amber-600 font-semibold lowercase">Custom override</span>
+          </label>
+          <input
+            type="number"
+            min="0"
+            placeholder={`Default (${settings.defaultLowStockThreshold ?? 10} pcs from Store Settings)`}
+            value={formData.minStockAlert || ''}
+            onChange={(e) => setFormData({ ...formData, minStockAlert: Number(e.target.value) })}
+            className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-amber-500 bg-amber-50/30 placeholder-slate-400"
+          />
+          <p className="text-[11px] text-slate-400 mt-1">
+            Leave blank or 0 to use store default ({settings.defaultLowStockThreshold ?? 10} pcs).
+          </p>
+        </div>
+
+        <div>
           <label className="block text-xs font-bold text-slate-700 mb-1">Product Image</label>
           <input
             type="file"
@@ -597,9 +652,9 @@ function ProductsContent() {
               <button
                 type="button"
                 onClick={() => setIsCategoryManagerOpen(false)}
-                className="text-slate-400 hover:text-white rounded-lg p-1 transition-colors font-bold text-base cursor-pointer"
+                className="text-slate-400 hover:text-white rounded-lg p-1 transition-colors font-bold text-base cursor-pointer flex items-center justify-center"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -607,7 +662,7 @@ function ProductsContent() {
               {categoryError && (
                 <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl flex items-center justify-between">
                   <span>{categoryError}</span>
-                  <button type="button" onClick={() => setCategoryError(null)} className="font-bold text-rose-500 hover:text-rose-700 ml-2">✕</button>
+                  <button type="button" onClick={() => setCategoryError(null)} className="font-bold text-rose-500 hover:text-rose-700 ml-2 p-0.5"><X className="w-4 h-4" /></button>
                 </div>
               )}
 
@@ -734,9 +789,9 @@ function ProductsContent() {
               <button
                 type="button"
                 onClick={() => setIsHistoryModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 rounded-lg p-1 transition-colors font-bold text-base cursor-pointer"
+                className="text-slate-400 hover:text-slate-600 rounded-lg p-1 transition-colors font-bold text-base cursor-pointer flex items-center justify-center"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-6 max-h-[380px] overflow-y-auto space-y-3">

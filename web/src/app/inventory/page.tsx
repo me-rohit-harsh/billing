@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Boxes, AlertTriangle, ArrowUpRight, ArrowDownRight, RefreshCw, Plus, Download } from 'lucide-react';
 import { api, Product } from '@/lib/api';
 import { FormModal } from '@/components/shared/FormModal';
 import { TableFilter } from '@/components/shared/TableFilter';
 import { useToast } from '@/context/ToastContext';
+import { useStoreSettings } from '@/context/StoreSettingsContext';
 import { exportToCSV } from '@/lib/exportUtils';
 
 interface StockLog {
@@ -18,8 +20,13 @@ interface StockLog {
   createdAt: string;
 }
 
-export default function InventoryPage() {
+function InventoryContent() {
+  const searchParams = useSearchParams();
+  const filterParam = searchParams ? searchParams.get('filter') : null;
+  const adjustParam = searchParams ? searchParams.get('adjustProduct') || searchParams.get('adjust') : null;
+
   const { toast } = useToast();
+  const { settings } = useStoreSettings();
   const [products, setProducts] = useState<Product[]>([]);
   const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
   const [stockLogs, setStockLogs] = useState<StockLog[]>([]);
@@ -51,10 +58,27 @@ export default function InventoryPage() {
   const [adjustType, setAdjustType] = useState<'IN' | 'OUT' | 'ADJUSTMENT'>('IN');
   const [adjustQty, setAdjustQty] = useState<number>(0);
   const [adjustReason, setAdjustReason] = useState<string>('Restock / Purchase');
+  const [onlyLowStock, setOnlyLowStock] = useState(false);
+
+  useEffect(() => {
+    if (filterParam === 'low_stock') {
+      setOnlyLowStock(true);
+    }
+  }, [filterParam]);
+
+  useEffect(() => {
+    if (adjustParam && products.length > 0) {
+      const prod = products.find((p) => p._id === adjustParam);
+      if (prod) {
+        setSelectedProduct(prod);
+        setIsAdjustModalOpen(true);
+      }
+    }
+  }, [adjustParam, products]);
 
   useEffect(() => {
     fetchInventoryData();
-  }, []);
+  }, [settings.defaultLowStockThreshold]);
 
   const fetchInventoryData = async () => {
     try {
@@ -63,8 +87,15 @@ export default function InventoryPage() {
         api.get('/products/low-stock'),
         api.get('/products/stock-logs'),
       ]);
-      setProducts(prodRes.data || []);
-      setLowStockProducts(lowRes.data || []);
+      const allProducts: Product[] = prodRes.data || [];
+      setProducts(allProducts);
+
+      const defaultThreshold = settings.defaultLowStockThreshold ?? 10;
+      const lowStockList = allProducts.filter((p) => {
+        const threshold = p.minStockAlert && p.minStockAlert > 0 ? p.minStockAlert : defaultThreshold;
+        return p.stock <= threshold;
+      });
+      setLowStockProducts(lowStockList);
       setStockLogs(logsRes.data || []);
     } catch (err) {
       console.error('Inventory fetch error', err);
@@ -76,6 +107,7 @@ export default function InventoryPage() {
       toast.error('No inventory products to export.');
       return;
     }
+    const defaultThreshold = settings.defaultLowStockThreshold ?? 10;
     const fields = [
       { key: 'name', label: 'Product Name' },
       { key: 'sku', label: 'SKU' },
@@ -83,7 +115,14 @@ export default function InventoryPage() {
       { key: 'stock', label: 'Stock On Hand' },
       { key: 'unit', label: 'Unit' },
       { key: 'price', label: 'Selling Price (₹)' },
-      { key: 'stockStatus', label: 'Stock Status', transform: (_: any, p: Product) => (p.stock <= 5 ? 'Low Stock Alert' : 'In Stock') },
+      {
+        key: 'stockStatus',
+        label: 'Stock Status',
+        transform: (_: any, p: Product) => {
+          const threshold = p.minStockAlert && p.minStockAlert > 0 ? p.minStockAlert : defaultThreshold;
+          return p.stock <= threshold ? `Low Stock Warning (<= ${threshold})` : 'In Stock';
+        },
+      },
     ];
     const dateStr = new Date().toISOString().slice(0, 10);
     const success = exportToCSV(`inventory_stock_${dateStr}`, filteredProducts, fields);
@@ -132,9 +171,21 @@ export default function InventoryPage() {
     }
   };
 
-  const filteredProducts = products.filter(
-    (p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredProducts = products.filter((p) => {
+    const matchesSearch =
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    if (!matchesSearch) return false;
+
+    if (onlyLowStock) {
+      const threshold = p.minStockAlert && p.minStockAlert > 0 ? p.minStockAlert : (settings.defaultLowStockThreshold ?? 10);
+      return p.stock <= threshold;
+    }
+
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -149,15 +200,37 @@ export default function InventoryPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => fetchInventoryData()}
+            className="h-10 px-3 border border-slate-200 rounded-xl bg-white hover:bg-slate-50 text-slate-600 font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Refresh Inventory"
+          >
+            <RefreshCw className="w-3.5 h-3.5" /> Refresh
+          </button>
+          <button
             onClick={handleExportInventoryStock}
             className="h-10 px-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
             title="Export Stock CSV"
           >
             <Download className="w-4 h-4 text-amber-600" /> Export Stock
           </button>
-         
         </div>
       </div>
+
+      {onlyLowStock && (
+        <div className="flex items-center justify-between bg-rose-50 border border-rose-200 p-4 rounded-2xl animate-in fade-in duration-200">
+          <div className="flex items-center gap-2 text-xs font-bold text-rose-900">
+            <span className="bg-rose-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full">Dashboard Filter</span>
+            <span>Showing <strong>Low Stock Alert Items Only</strong> ({filteredProducts.length} item(s) found)</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setOnlyLowStock(false)}
+            className="text-xs font-extrabold text-rose-700 hover:text-slate-900 underline cursor-pointer"
+          >
+            Show All Inventory Items
+          </button>
+        </div>
+      )}
 
       {/* Summary Alert Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -245,11 +318,19 @@ export default function InventoryPage() {
                   <td className="p-4 font-mono text-xs text-slate-500">{prod.sku || prod.barcode || 'N/A'}</td>
                   <td className="p-4 font-extrabold text-slate-900">{prod.stock} {prod.unit}</td>
                   <td className="p-4">
-                    {prod.stock <= 5 ? (
-                      <span className="px-2.5 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-lg">Low Stock</span>
-                    ) : (
-                      <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-lg">In Stock</span>
-                    )}
+                    {(() => {
+                      const threshold = prod.minStockAlert && prod.minStockAlert > 0 ? prod.minStockAlert : (settings.defaultLowStockThreshold ?? 10);
+                      const isLow = prod.stock <= threshold;
+                      return isLow ? (
+                        <span className="px-2.5 py-1 bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-lg inline-flex items-center gap-1" title={`Low Stock Warning (Threshold: ${threshold})`}>
+                          Low Stock Alert <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-lg">
+                          In Stock
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="p-4 text-right">
                     <button
@@ -270,40 +351,47 @@ export default function InventoryPage() {
       ) : (
         /* Inventory Card Grid View */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProducts.map((prod) => (
-            <div key={prod._id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs text-slate-400 font-mono">SKU: {prod.sku || 'N/A'}</span>
-                  {prod.stock <= 5 ? (
-                    <span className="px-2.5 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-lg">Low Stock</span>
-                  ) : (
-                    <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg">In Stock</span>
-                  )}
+          {filteredProducts.map((prod) => {
+            const threshold = prod.minStockAlert && prod.minStockAlert > 0 ? prod.minStockAlert : (settings.defaultLowStockThreshold ?? 10);
+            const isLow = prod.stock <= threshold;
+
+            return (
+              <div key={prod._id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs text-slate-400 font-mono">SKU: {prod.sku || 'N/A'}</span>
+                    {isLow ? (
+                      <span className="px-2.5 py-1 bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-lg inline-flex items-center gap-1" title={`Low Stock Warning (Threshold: ${threshold})`}>
+                        Low Stock Alert <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg">In Stock</span>
+                    )}
+                  </div>
+
+                  <h3 className="font-extrabold text-slate-900 text-base">{prod.name}</h3>
+                  <span className="text-xs text-slate-500 font-medium block mt-1">Category: {prod.category || 'General'}</span>
+
+                  <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+                    <span className="text-xs text-slate-500 font-bold uppercase">Stock On Hand</span>
+                    <span className="text-lg font-black text-slate-900">{prod.stock} {prod.unit}</span>
+                  </div>
                 </div>
 
-                <h3 className="font-extrabold text-slate-900 text-base">{prod.name}</h3>
-                <span className="text-xs text-slate-500 font-medium block mt-1">Category: {prod.category || 'General'}</span>
-
-                <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
-                  <span className="text-xs text-slate-500 font-bold uppercase">Stock On Hand</span>
-                  <span className="text-lg font-black text-slate-900">{prod.stock} {prod.unit}</span>
+                <div className="pt-4 mt-4 border-t border-slate-100">
+                  <button
+                    onClick={() => {
+                      setSelectedProduct(prod);
+                      setIsAdjustModalOpen(true);
+                    }}
+                    className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    + / - Adjust Stock Quantity
+                  </button>
                 </div>
               </div>
-
-              <div className="pt-4 mt-4 border-t border-slate-100">
-                <button
-                  onClick={() => {
-                    setSelectedProduct(prod);
-                    setIsAdjustModalOpen(true);
-                  }}
-                  className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  + / - Adjust Stock Quantity
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -415,5 +503,13 @@ export default function InventoryPage() {
         </div>
       </FormModal>
     </div>
+  );
+}
+
+export default function InventoryPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-400 font-bold">Loading inventory manager...</div>}>
+      <InventoryContent />
+    </Suspense>
   );
 }

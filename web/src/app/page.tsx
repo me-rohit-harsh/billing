@@ -328,7 +328,18 @@ export default function POSPage() {
                       <h4 className="font-bold text-slate-800 text-sm truncate">{product.name}</h4>
                       <div className="flex items-center justify-between mt-1 mb-3">
                         <span className="text-blue-600 font-extrabold text-base">₹{product.price}</span>
-                        <span className="text-xs font-semibold text-slate-400">Stock: {product.stock}</span>
+                        {(() => {
+                          const threshold = product.minStockAlert && product.minStockAlert > 0 ? product.minStockAlert : (settings.defaultLowStockThreshold ?? 10);
+                          const isLow = product.stock <= threshold;
+                          return (
+                            <span
+                              className={`text-xs font-semibold ${isLow ? 'text-rose-600 font-extrabold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200' : 'text-slate-500'}`}
+                              title={isLow ? `Low Stock Warning! (Stock: ${product.stock} <= Threshold: ${threshold})` : `Stock Level: ${product.stock}`}
+                            >
+                              Stock: {product.stock} {isLow && '⚠️'}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>

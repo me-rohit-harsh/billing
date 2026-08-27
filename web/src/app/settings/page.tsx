@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useStoreSettings, defaultStoreSettings } from '@/context/StoreSettingsContext';
 import { useToast } from '@/context/ToastContext';
-import { Store, Tag, MapPin, FileText, Phone, HeartHandshake, ShieldAlert, Sparkles, Save, CheckCircle2, Download } from 'lucide-react';
+import { Store, Tag, MapPin, FileText, Phone, HeartHandshake, ShieldAlert, Sparkles, Save, CheckCircle2, Download, Upload, Trash2, Loader2 } from 'lucide-react';
+import { api } from '@/lib/api';
 import { exportToJSON } from '@/lib/exportUtils';
 
 export default function SettingsPage() {
@@ -11,13 +12,37 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [formData, setFormData] = useState(settings);
   const [isSavedAlert, setIsSavedAlert] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   useEffect(() => {
     setFormData(settings);
   }, [settings]);
 
-  const handleChange = (field: keyof typeof settings, value: string) => {
+  const handleChange = (field: keyof typeof settings, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleLogoFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingLogo(true);
+      const data = new FormData();
+      data.append('file', file);
+      const res = await api.post('/products/upload-image', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      if (res.data?.imageUrl) {
+        const fullUrl = `http://localhost:5000${res.data.imageUrl}`;
+        handleChange('logoUrl', fullUrl);
+        toast.success('Store logo uploaded successfully!');
+      }
+    } catch {
+      toast.error('Failed to upload logo image file.');
+    } finally {
+      setIsUploadingLogo(false);
+    }
   };
 
   const handleExportSettings = () => {
@@ -64,12 +89,12 @@ export default function SettingsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-amber-600 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-amber-600/20 shrink-0">
-
+            <Store className="w-7 h-7 text-white" />
           </div>
           <div>
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Configure Store & Receipt Details</h1>
             <p className="text-slate-500 text-sm font-medium mt-0.5">
-              Customize your hardware store branding, GSTIN, phone, and POS thermal bill slip layout
+              Customize your hardware store branding, GSTIN, default stock alerts, and thermal bill slip layout
             </p>
           </div>
         </div>
@@ -127,6 +152,98 @@ export default function SettingsPage() {
                 placeholder="e.g. Tools, Fasteners, Electrical & Plumbing"
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                <span>Store Logo Branding</span>
+                <span className="text-[11px] text-slate-400 font-normal lowercase">Upload image file or enter URL</span>
+              </label>
+
+              <div className="space-y-3">
+                {/* File Upload Button & File Input */}
+                <div className="flex items-center gap-3">
+                  <label className="h-11 px-4 rounded-xl border border-slate-200 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold text-xs flex items-center gap-2 cursor-pointer transition-all shadow-2xs">
+                    {isUploadingLogo ? <Loader2 className="w-4 h-4 animate-spin text-amber-600" /> : <Upload className="w-4 h-4 text-amber-600" />}
+                    <span>{isUploadingLogo ? 'Uploading Logo...' : 'Upload Store Logo File'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoFileUpload}
+                      className="hidden"
+                      disabled={isUploadingLogo}
+                    />
+                  </label>
+
+                  {formData.logoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => handleChange('logoUrl', '')}
+                      className="h-11 px-3 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                      title="Remove Custom Logo & Reset to BuildPro"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Remove Logo
+                    </button>
+                  )}
+                </div>
+
+                {/* Direct Image URL input */}
+                <input
+                  type="url"
+                  value={formData.logoUrl || ''}
+                  onChange={(e) => handleChange('logoUrl', e.target.value)}
+                  placeholder="Or paste image URL (e.g. https://example.com/logo.png)"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
+                />
+
+                {/* Live Logo Preview Container */}
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-3">
+                  {formData.logoUrl ? (
+                    <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center shrink-0 p-1">
+                      <img src={formData.logoUrl} alt="Store Logo Preview" className="w-full h-full object-contain" />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 rounded-xl bg-amber-600 flex items-center justify-center text-white font-black text-xl shrink-0">
+                      <Store className="w-6 h-6 text-white" />
+                    </div>
+                  )}
+                  <div className="text-xs">
+                    <p className="font-bold text-slate-900">
+                      {formData.logoUrl ? 'Custom Store Logo Active' : `Store Branding: ${formData.storeName || 'BUILDPRO HARDWARE STORE'}`}
+                    </p>
+                    <p className="text-slate-400 text-[11px]">
+                      {formData.logoUrl
+                        ? 'This custom logo will be rendered in the app sidebar alongside your store name.'
+                        : `Sidebar branding will display your saved store name '${formData.storeName || 'BUILDPRO HARDWARE STORE'}'.`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Default Inventory & Low Stock Alerts */}
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
+            <h3 className="font-extrabold text-slate-900 text-base border-b border-slate-100 pb-3 flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-amber-600" /> Default Inventory & Low Stock Alerts
+            </h3>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                <span>Default Low Stock Warning Threshold (pcs)</span>
+                <span className="text-[11px] text-amber-600 font-semibold lowercase">Overrideable per product</span>
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={formData.defaultLowStockThreshold ?? 10}
+                onChange={(e) => handleChange('defaultLowStockThreshold', Number(e.target.value))}
+                placeholder="e.g. 10"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
+              />
+              <p className="text-xs text-slate-400 mt-1 font-medium">
+                Products with stock level at or below this threshold trigger a low-stock alert, unless custom min stock is set on that product.
+              </p>
             </div>
           </div>
 

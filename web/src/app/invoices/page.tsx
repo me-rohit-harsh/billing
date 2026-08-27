@@ -14,6 +14,7 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
+  const [dateRange, setDateRange] = useState<string>('all');
   const [activeReceipt, setActiveReceipt] = useState<Invoice | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>(() => {
@@ -28,6 +29,15 @@ export default function InvoicesPage() {
     return 'table';
   });
 
+  const timeRangeLabels: Record<string, string> = {
+    today: 'Today',
+    '7d': 'Last 7 Days',
+    '30d': 'Last 30 Days',
+    this_month: 'This Month',
+    this_year: 'This Year',
+    all: 'All Time',
+  };
+
   useEffect(() => {
     fetchInvoicesAndCustomers();
     try {
@@ -35,6 +45,10 @@ export default function InvoicesPage() {
       const search = params.get('customer') || params.get('search');
       if (search) {
         setSelectedCustomer(search);
+      }
+      const range = params.get('range');
+      if (range) {
+        setDateRange(range);
       }
     } catch {
       // Ignore URL parse errors
@@ -105,7 +119,27 @@ export default function InvoicesPage() {
       (inv.customerName && inv.customerName.toLowerCase() === selectedCustomer.toLowerCase()) ||
       (!inv.customerName && selectedCustomer === 'Walk-in Customer (Guest)');
 
-    return matchesSearch && matchesCustomer;
+    let matchesDate = true;
+    if (dateRange && dateRange !== 'all') {
+      const now = new Date();
+      let startDate: Date | null = null;
+      if (dateRange === 'today') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      } else if (dateRange === '7d') {
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      } else if (dateRange === '30d') {
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      } else if (dateRange === 'this_month') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      } else if (dateRange === 'this_year') {
+        startDate = new Date(now.getFullYear(), 0, 1);
+      }
+      if (startDate && inv.createdAt) {
+        matchesDate = new Date(inv.createdAt) >= startDate;
+      }
+    }
+
+    return matchesSearch && matchesCustomer && matchesDate;
   });
 
   const getPaymentModeBadge = (mode?: string) => {
@@ -138,6 +172,50 @@ export default function InvoicesPage() {
           <Download className="w-4 h-4 text-amber-600" /> Export CSV
         </button>
       </div>
+
+      {(dateRange !== 'all' || selectedCustomer) && (
+        <div className="flex items-center justify-between bg-amber-50/80 border border-amber-200 p-4 rounded-2xl animate-in fade-in duration-200">
+          <div className="flex items-center gap-2 flex-wrap text-xs font-bold text-slate-800">
+            <span className="text-amber-800 uppercase tracking-wider font-extrabold text-[11px]">Applied Dashboard Filters:</span>
+            {dateRange !== 'all' && (
+              <span className="inline-flex items-center gap-1.5 bg-amber-100/90 text-amber-900 px-3 py-1 rounded-xl border border-amber-300 shadow-2xs">
+                <span>Period: <strong>{timeRangeLabels[dateRange] || dateRange}</strong></span>
+                <button
+                  type="button"
+                  onClick={() => setDateRange('all')}
+                  className="hover:text-rose-600 font-extrabold text-sm ml-0.5 cursor-pointer"
+                  title="Clear Date Filter"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {selectedCustomer && (
+              <span className="inline-flex items-center gap-1.5 bg-amber-100/90 text-amber-900 px-3 py-1 rounded-xl border border-amber-300 shadow-2xs">
+                <span>Customer: <strong>{selectedCustomer}</strong></span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCustomer('')}
+                  className="hover:text-rose-600 font-extrabold text-sm ml-0.5 cursor-pointer"
+                  title="Clear Customer Filter"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setDateRange('all');
+              setSelectedCustomer('');
+            }}
+            className="text-xs font-extrabold text-amber-700 hover:text-rose-600 underline shrink-0 cursor-pointer"
+          >
+            Clear All Filters
+          </button>
+        </div>
+      )}
 
       <TableFilter
         searchQuery={searchQuery}

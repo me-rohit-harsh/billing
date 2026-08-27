@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ShoppingCart, Package, Users, Receipt, Boxes, Settings, Tags, CloudUpload } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Package, Users, Receipt, Boxes, Settings, Tags, CloudUpload, Store, Zap } from 'lucide-react';
+import { useStoreSettings } from '@/context/StoreSettingsContext';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -11,6 +12,12 @@ interface SidebarProps {
 
 export function Sidebar({ isCollapsed }: SidebarProps) {
   const pathname = usePathname();
+  const { settings } = useStoreSettings();
+  const [logoError, setLogoError] = useState(false);
+
+  useEffect(() => {
+    setLogoError(false);
+  }, [settings.logoUrl]);
 
   const navItems = [
     { href: '/dashboard', label: 'Analytics Dashboard', icon: LayoutDashboard },
@@ -32,14 +39,31 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
       <div>
         {/* Header Branding */}
         <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} py-3 mb-6 border-b border-slate-100`}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-600 flex items-center justify-center text-white font-black text-xl shadow-md shrink-0">
-
-            </div>
+          <div className="flex items-center gap-3 min-w-0">
+            {settings.logoUrl && !logoError ? (
+              <div className="w-10 h-10 rounded-xl overflow-hidden bg-white border border-slate-200 flex items-center justify-center shrink-0 shadow-sm">
+                <img
+                  src={settings.logoUrl}
+                  alt={settings.storeName || 'Store Logo'}
+                  onError={() => setLogoError(true)}
+                  className="w-full h-full object-contain p-1"
+                />
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-amber-600 flex items-center justify-center text-white font-black text-xl shadow-md shrink-0">
+                <Store className="w-5 h-5 text-white" />
+              </div>
+            )}
             {!isCollapsed && (
-              <div className="animate-in fade-in duration-200">
-                <h1 className="font-bold text-slate-900 leading-none text-base">BuildPro</h1>
-                <span className="text-[11px] font-bold text-amber-600">Hardware & POS</span>
+              <div className="animate-in fade-in duration-200 min-w-0">
+                <h1 className="font-extrabold text-slate-900 leading-none text-base truncate" title={settings.storeName || 'BUILDPRO HARDWARE STORE'}>
+                  {settings.storeName || 'BUILDPRO HARDWARE STORE'}
+                </h1>
+                {settings.tagline && (
+                  <span className="text-[11px] font-bold text-amber-600 block truncate mt-0.5" title={settings.tagline}>
+                    {settings.tagline}
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -75,7 +99,7 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" title="Offline Ready" />
         ) : (
           <span>
-            ⚡ System Status: <span className="text-emerald-600 font-bold">Offline Ready</span>
+            <Zap className="w-3.5 h-3.5 text-amber-500 inline mr-1" /> System Status: <span className="text-emerald-600 font-bold">Offline Ready</span>
           </span>
         )}
       </div>
