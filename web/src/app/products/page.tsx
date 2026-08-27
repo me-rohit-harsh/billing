@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Plus, Trash2, Package, Edit, History, ArrowDownRight, ArrowUpRight, FolderPlus, Tags, Download, ShieldAlert, AlertTriangle, X } from 'lucide-react';
-import { api, Product } from '@/lib/api';
+import { api, Product, getImageUrl } from '@/lib/api';
 import { FormModal } from '@/components/shared/FormModal';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import { TableFilter } from '@/components/shared/TableFilter';
@@ -409,7 +409,7 @@ function ProductsContent() {
                   <td className="p-4 flex items-center gap-3">
                     <div className="w-10 h-10 bg-slate-100 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
                       {prod.imageUrl ? (
-                        <img src={`http://localhost:5000${prod.imageUrl}`} alt="" className="w-full h-full object-cover" />
+                        <img src={getImageUrl(prod.imageUrl)} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <Package className="w-5 h-5 text-slate-400" />
                       )}
@@ -483,7 +483,7 @@ function ProductsContent() {
                   <div className="flex items-center justify-between gap-3 mb-3">
                     <div className="w-12 h-12 bg-slate-100 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-slate-200">
                       {prod.imageUrl ? (
-                        <img src={`http://localhost:5000${prod.imageUrl}`} alt="" className="w-full h-full object-cover" />
+                        <img src={getImageUrl(prod.imageUrl)} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <Package className="w-6 h-6 text-slate-400" />
                       )}

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useStoreSettings, defaultStoreSettings, themePalettes } from '@/context/StoreSettingsContext';
 import { useToast } from '@/context/ToastContext';
 import { Store, Tag, MapPin, FileText, Phone, HeartHandshake, ShieldAlert, Sparkles, Save, CheckCircle2, Download, Upload, Trash2, Loader2, Palette, Coins, Printer } from 'lucide-react';
-import { api } from '@/lib/api';
+import { api, getImageUrl } from '@/lib/api';
 import { exportToJSON } from '@/lib/exportUtils';
 
 export default function SettingsPage() {
@@ -200,7 +200,7 @@ export default function SettingsPage() {
                 <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-3">
                   {formData.logoUrl ? (
                     <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center shrink-0 p-1">
-                      <img src={formData.logoUrl} alt="Store Logo Preview" className="w-full h-full object-contain" />
+                      <img src={getImageUrl(formData.logoUrl)} alt="Store Logo Preview" className="w-full h-full object-contain" />
                     </div>
                   ) : (
                     <div className="w-12 h-12 rounded-xl bg-amber-600 flex items-center justify-center text-white font-black text-xl shrink-0">

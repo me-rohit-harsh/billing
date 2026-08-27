@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Printer, Package, Plus, Minus, UserCheck, Download, Maximize2, X, Trash2, Eye } from 'lucide-react';
-import { api, Product, Customer, Invoice } from '@/lib/api';
+import { api, Product, Customer, Invoice, getImageUrl } from '@/lib/api';
 import { TableFilter } from '@/components/shared/TableFilter';
 import { CustomDropdown } from '@/components/shared/CustomDropdown';
 import { useStoreSettings } from '@/context/StoreSettingsContext';
@@ -311,7 +311,7 @@ export default function POSPage() {
                     <div className="aspect-square bg-slate-100 rounded-xl mb-3 overflow-hidden flex items-center justify-center relative">
                       {product.imageUrl ? (
                         <img
-                          src={`http://localhost:5000${product.imageUrl}`}
+                          src={getImageUrl(product.imageUrl)}
                           alt={product.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                         />

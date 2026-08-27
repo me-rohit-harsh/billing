@@ -6,6 +6,8 @@ import { usePathname } from 'next/navigation';
 import { LayoutDashboard, ShoppingCart, Package, Users, Receipt, Boxes, Settings, Tags, CloudUpload, Store, Zap } from 'lucide-react';
 import { useStoreSettings } from '@/context/StoreSettingsContext';
 
+import { getImageUrl } from '@/lib/api';
+
 const themeColorMap: Record<string, { bg: string; text: string; activeNav: string }> = {
   amber: { bg: 'bg-amber-600', text: 'text-amber-600', activeNav: 'bg-amber-600 text-white shadow-md' },
   blue: { bg: 'bg-blue-600', text: 'text-blue-600', activeNav: 'bg-blue-600 text-white shadow-md' },
@@ -56,7 +58,7 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
             {settings.logoUrl && !logoError ? (
               <div className="w-10 h-10 rounded-xl overflow-hidden bg-white border border-slate-200 flex items-center justify-center shrink-0 shadow-sm">
                 <img
-                  src={settings.logoUrl}
+                  src={getImageUrl(settings.logoUrl)}
                   alt={settings.storeName || 'Store Logo'}
                   onError={() => setLogoError(true)}
                   className="w-full h-full object-contain p-1"
