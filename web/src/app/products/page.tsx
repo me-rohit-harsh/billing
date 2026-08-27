@@ -265,7 +265,7 @@ function ProductsContent() {
     .filter((p) => {
       if (!selectedCategories || selectedCategories.length === 0) return true;
       return (
-        selectedCategories.includes(p.category) ||
+        Boolean(p.category && selectedCategories.includes(p.category)) ||
         categories.some((c) => selectedCategories.includes(c._id) && c.name === p.category)
       );
     });

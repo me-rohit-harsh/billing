@@ -136,12 +136,7 @@ export default function InventoryPage() {
           >
             <Download className="w-4 h-4 text-amber-600" /> Export Stock
           </button>
-          <button
-            onClick={fetchInventoryData}
-            className="h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-sm transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <RefreshCw className="w-4 h-4 text-amber-600" /> Refresh Stock Data
-          </button>
+         
         </div>
       </div>
 
