@@ -64,6 +64,69 @@ interface DashboardData {
   trendData: Array<{ date: string; revenue: number; orders: number; tax: number }>;
 }
 
+function AnimatedCounter({
+  value,
+  duration = 800,
+  prefix = '',
+  suffix = '',
+  decimals = 0,
+}: {
+  value: number;
+  duration?: number;
+  prefix?: string;
+  suffix?: string;
+  decimals?: number;
+}) {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    let startTimestamp: number | null = null;
+    const startValue = 0;
+    const endValue = value;
+
+    if (endValue === 0) {
+      setDisplayValue(0);
+      return;
+    }
+
+    let animationFrameId: number;
+
+    const step = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      const current = easeProgress * (endValue - startValue) + startValue;
+
+      setDisplayValue(current);
+
+      if (progress < 1) {
+        animationFrameId = window.requestAnimationFrame(step);
+      } else {
+        setDisplayValue(endValue);
+      }
+    };
+
+    animationFrameId = window.requestAnimationFrame(step);
+
+    return () => {
+      if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
+    };
+  }, [value, duration]);
+
+  const formattedNumber = displayValue.toLocaleString('en-IN', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+
+  return (
+    <span>
+      {prefix}
+      {formattedNumber}
+      {suffix}
+    </span>
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -152,7 +215,10 @@ export default function DashboardPage() {
 
     const totalProductsCount = products.length;
     const totalStockUnits = products.reduce((acc, p) => acc + (p.stock || 0), 0);
-    const lowStockList = products.filter((p) => (p.stock || 0) < 10);
+    const lowStockList = products.filter((p) => {
+      const threshold = p.minStockAlert !== undefined && p.minStockAlert !== null && p.minStockAlert > 0 ? p.minStockAlert : 10;
+      return (p.stock || 0) <= threshold;
+    });
     const totalStockValuation = products.reduce((acc, p) => acc + (p.stock || 0) * (p.price || 0), 0);
 
     const totalCustomersCount = customers.length;
@@ -385,8 +451,7 @@ ${dashboardStats.topProducts.length > 0 ? dashboardStats.topProducts.map((p, i) 
         {/* Card 1: Total Sales Revenue */}
         <div
           onClick={() => router.push(`/invoices?range=${timeRange}`)}
-          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-amber-400 hover:shadow-md transition-all cursor-pointer"
-          title={`Click to view invoices for ${timeRangeOptions.find(t => t._id === timeRange)?.name}`}
+          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-amber-500 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Revenue</span>
@@ -396,51 +461,43 @@ ${dashboardStats.topProducts.length > 0 ? dashboardStats.topProducts.map((p, i) 
           </div>
           <div className="mt-3">
             <h2 className="text-2xl font-black text-slate-900 group-hover:text-amber-700 transition-colors">
-              ₹{dashboardStats.kpi.totalRevenue.toLocaleString()}
+              <AnimatedCounter value={dashboardStats.kpi.totalRevenue} prefix="₹" decimals={2} />
             </h2>
             <div className="flex items-center gap-1.5 mt-2">
-              <span className="text-xs text-amber-600 font-semibold underline">
+              <span className="text-xs text-amber-700 font-bold hover:underline flex items-center gap-1">
                 View {timeRangeOptions.find(t => t._id === timeRange)?.name} Invoices →
               </span>
             </div>
-          </div>
-          <div className="w-full bg-slate-100 h-1.5 rounded-full mt-4 overflow-hidden">
-            <div className="bg-amber-500 h-full rounded-full w-[85%]" />
           </div>
         </div>
 
         {/* Card 2: Invoices & AOV */}
         <div
           onClick={() => router.push(`/invoices?range=${timeRange}`)}
-          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
-          title={`Click to view invoices for ${timeRangeOptions.find(t => t._id === timeRange)?.name}`}
+          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-amber-500 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Orders Count</span>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shadow-xs group-hover:bg-blue-600 group-hover:text-white transition-colors">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold shadow-xs group-hover:bg-amber-600 group-hover:text-white transition-colors">
               <Receipt className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
-            <h2 className="text-2xl font-black text-slate-900 group-hover:text-blue-700 transition-colors">
-              {dashboardStats.kpi.totalInvoices} Invoices
+            <h2 className="text-2xl font-black text-slate-900 group-hover:text-amber-700 transition-colors">
+              <AnimatedCounter value={dashboardStats.kpi.totalInvoices} suffix=" Invoices" />
             </h2>
             <div className="flex items-center gap-1.5 mt-2">
-              <span className="text-xs text-blue-600 font-semibold underline">
-                Avg Order: ₹{dashboardStats.kpi.averageOrderValue.toLocaleString()} →
+              <span className="text-xs text-amber-700 font-bold hover:underline flex items-center gap-1">
+                Avg Order: <AnimatedCounter value={dashboardStats.kpi.averageOrderValue} prefix="₹" /> →
               </span>
             </div>
-          </div>
-          <div className="w-full bg-slate-100 h-1.5 rounded-full mt-4 overflow-hidden">
-            <div className="bg-blue-500 h-full rounded-full w-[70%]" />
           </div>
         </div>
 
         {/* Card 3: Inventory Valuation */}
         <div
           onClick={() => router.push('/inventory')}
-          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer"
-          title="Click to view full inventory stock directory"
+          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-emerald-500 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Inventory Assets</span>
@@ -450,24 +507,20 @@ ${dashboardStats.topProducts.length > 0 ? dashboardStats.topProducts.map((p, i) 
           </div>
           <div className="mt-3">
             <h2 className="text-2xl font-black text-slate-900 group-hover:text-emerald-700 transition-colors">
-              ₹{dashboardStats.kpi.totalStockValuation.toLocaleString()}
+              <AnimatedCounter value={dashboardStats.kpi.totalStockValuation} prefix="₹" />
             </h2>
             <div className="flex items-center gap-1.5 mt-2">
-              <span className="text-xs text-emerald-600 font-semibold underline">
-                {dashboardStats.kpi.totalStockUnits} units ({dashboardStats.kpi.totalProductsCount} SKUs) →
+              <span className="text-xs text-emerald-700 font-bold hover:underline flex items-center gap-1">
+                <AnimatedCounter value={dashboardStats.kpi.totalStockUnits} suffix=" units" /> ({dashboardStats.kpi.totalProductsCount} SKUs) →
               </span>
             </div>
-          </div>
-          <div className="w-full bg-slate-100 h-1.5 rounded-full mt-4 overflow-hidden">
-            <div className="bg-emerald-500 h-full rounded-full w-[90%]" />
           </div>
         </div>
 
         {/* Card 4: Low Stock Alerts */}
         <div
           onClick={() => router.push('/inventory?filter=low_stock')}
-          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-rose-400 hover:shadow-md transition-all cursor-pointer"
-          title="Click to view low stock inventory items"
+          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-rose-500 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Stock Alerts</span>
@@ -477,24 +530,20 @@ ${dashboardStats.topProducts.length > 0 ? dashboardStats.topProducts.map((p, i) 
           </div>
           <div className="mt-3">
             <h2 className="text-2xl font-black text-slate-900 group-hover:text-rose-700 transition-colors">
-              {dashboardStats.kpi.lowStockCount} Items Low
+              <AnimatedCounter value={dashboardStats.kpi.lowStockCount} suffix=" Items Low" />
             </h2>
             <div className="flex items-center gap-1.5 mt-2">
-              <span className="inline-flex items-center gap-0.5 text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md underline">
+              <span className="text-xs font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md hover:underline">
                 Reorder Required →
               </span>
             </div>
-          </div>
-          <div className="w-full bg-slate-100 h-1.5 rounded-full mt-4 overflow-hidden">
-            <div className="bg-rose-500 h-full rounded-full w-[35%]" />
           </div>
         </div>
 
         {/* Card 5: GST Tax Revenue */}
         <div
           onClick={() => router.push(`/invoices?range=${timeRange}`)}
-          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-purple-400 hover:shadow-md transition-all cursor-pointer"
-          title={`Click to view tax invoices for ${timeRangeOptions.find(t => t._id === timeRange)?.name}`}
+          className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-purple-500 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">GST Tax Output</span>
@@ -504,16 +553,13 @@ ${dashboardStats.topProducts.length > 0 ? dashboardStats.topProducts.map((p, i) 
           </div>
           <div className="mt-3">
             <h2 className="text-2xl font-black text-slate-900 group-hover:text-purple-700 transition-colors">
-              ₹{dashboardStats.kpi.totalTax.toLocaleString()}
+              <AnimatedCounter value={dashboardStats.kpi.totalTax} prefix="₹" decimals={2} />
             </h2>
             <div className="flex items-center gap-1.5 mt-2">
-              <span className="text-xs text-purple-600 font-semibold underline">
+              <span className="text-xs text-purple-700 font-bold hover:underline flex items-center gap-1">
                 Tax Output ({timeRangeOptions.find(t => t._id === timeRange)?.name}) →
               </span>
             </div>
-          </div>
-          <div className="w-full bg-slate-100 h-1.5 rounded-full mt-4 overflow-hidden">
-            <div className="bg-purple-500 h-full rounded-full w-[75%]" />
           </div>
         </div>
       </div>

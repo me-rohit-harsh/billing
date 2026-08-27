@@ -64,7 +64,10 @@ export class DashboardController {
     // Inventory metrics
     const totalProductsCount = products.length;
     const totalStockUnits = products.reduce((sum, p) => sum + (p.stock || 0), 0);
-    const lowStockProducts = products.filter((p) => (p.stock || 0) < 10);
+    const lowStockProducts = products.filter((p) => {
+      const threshold = p.minStockAlert !== undefined && p.minStockAlert !== null && p.minStockAlert > 0 ? p.minStockAlert : 10;
+      return (p.stock || 0) <= threshold;
+    });
     const totalStockValuation = products.reduce((sum, p) => sum + (p.stock || 0) * (p.price || 0), 0);
 
     // Customer metrics

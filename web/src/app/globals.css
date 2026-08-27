@@ -65,6 +65,34 @@ body {
   background-color: var(--brand-light) !important;
 }
 
+/* Group hover background specificity overrides for KPI cards & containers */
+.group:hover .group-hover\:bg-amber-600,
+.group:hover .group-hover\:bg-amber-500,
+.group:hover .group-hover\:bg-brand-primary {
+  background-color: var(--brand-primary) !important;
+}
+
+.group:hover .group-hover\:bg-blue-600 {
+  background-color: #2563eb !important;
+}
+
+.group:hover .group-hover\:bg-emerald-600 {
+  background-color: #059669 !important;
+}
+
+.group:hover .group-hover\:bg-rose-600 {
+  background-color: #e11d48 !important;
+}
+
+.group:hover .group-hover\:bg-purple-600 {
+  background-color: #9333ea !important;
+}
+
+.group:hover .group-hover\:text-white,
+.group:hover .group-hover\:text-white * {
+  color: #ffffff !important;
+}
+
 /* Custom thin scrollbar for POS cart panes */
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;
