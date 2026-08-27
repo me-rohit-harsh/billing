@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShoppingCart, Package, Users, Receipt, Boxes } from 'lucide-react';
+import { ShoppingCart, Package, Users, Receipt, Boxes, Settings, Tags } from 'lucide-react';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -15,9 +15,11 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
   const navItems = [
     { href: '/', label: 'POS Console', icon: ShoppingCart },
     { href: '/products', label: 'Products Catalog', icon: Package },
+    { href: '/categories', label: 'Product Categories', icon: Tags },
     { href: '/inventory', label: 'Inventory Manager', icon: Boxes },
     { href: '/invoices', label: 'Invoices History', icon: Receipt },
     { href: '/customers', label: 'Customers Directory', icon: Users },
+    { href: '/settings', label: 'Store Settings', icon: Settings },
   ];
 
   return (
@@ -56,7 +58,7 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
                   isCollapsed ? 'justify-center px-0 py-3' : 'px-4 py-3'
                 } rounded-xl text-sm font-bold transition-all ${
                   isActive
-                    ? 'bg-blue-600 text-white shadow-md'
+                    ? 'bg-amber-600 text-white shadow-md'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >

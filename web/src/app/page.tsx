@@ -5,8 +5,10 @@ import { ShoppingCart, Printer, Package, Plus, Minus, UserCheck } from 'lucide-r
 import { api, Product, Customer, Invoice } from '@/lib/api';
 import { TableFilter } from '@/components/shared/TableFilter';
 import { CustomDropdown } from '@/components/shared/CustomDropdown';
+import { useStoreSettings } from '@/context/StoreSettingsContext';
 
 export default function POSPage() {
+  const { settings } = useStoreSettings();
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [cart, setCart] = useState<(Product & { qty: number })[]>([]);
@@ -16,15 +18,44 @@ export default function POSPage() {
   const [custName, setCustName] = useState<string>('');
   const [custPhone, setCustPhone] = useState<string>('');
 
-  const [discount, setDiscount] = useState<number>(0);
+  const [discountType, setDiscountType] = useState<'FIXED' | 'PERCENT'>('FIXED');
+  const [discountValue, setDiscountValue] = useState<number>(0);
   const [paymentMode, setPaymentMode] = useState<'CASH' | 'UPI' | 'CARD' | 'CREDIT'>('CASH');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [categories, setCategories] = useState<{ _id: string; name: string }[]>([]);
   const [activeReceipt, setActiveReceipt] = useState<Invoice | null>(null);
 
   useEffect(() => {
     fetchProducts();
     fetchCustomers();
+    fetchCategories();
   }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const res = await api.get('/categories');
+      if (res.data && res.data.length > 0) {
+        setCategories(res.data);
+      } else {
+        setCategories([
+          { _id: 'Power Tools', name: 'Power Tools' },
+          { _id: 'Fasteners', name: 'Fasteners' },
+          { _id: 'Plumbing', name: 'Plumbing' },
+          { _id: 'Electrical', name: 'Electrical' },
+          { _id: 'Paints', name: 'Paints' },
+        ]);
+      }
+    } catch {
+      setCategories([
+        { _id: 'Power Tools', name: 'Power Tools' },
+        { _id: 'Fasteners', name: 'Fasteners' },
+        { _id: 'Plumbing', name: 'Plumbing' },
+        { _id: 'Electrical', name: 'Electrical' },
+        { _id: 'Paints', name: 'Paints' },
+      ]);
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -75,7 +106,12 @@ export default function POSPage() {
 
   const cartSubtotal = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
   const cartTaxTotal = cart.reduce((acc, item) => acc + (item.price * item.qty * (item.taxRate || 0)) / 100, 0);
-  const cartGrandTotal = Math.max(0, cartSubtotal + cartTaxTotal - discount);
+  
+  const calculatedDiscount = discountType === 'PERCENT'
+    ? ((cartSubtotal + cartTaxTotal) * (discountValue || 0)) / 100
+    : (discountValue || 0);
+
+  const cartGrandTotal = Math.max(0, cartSubtotal + cartTaxTotal - calculatedDiscount);
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
@@ -98,7 +134,7 @@ export default function POSPage() {
       })),
       subtotal: cartSubtotal,
       taxTotal: cartTaxTotal,
-      discount: discount,
+      discount: calculatedDiscount,
       grandTotal: cartGrandTotal,
       paymentMode: paymentMode,
       paymentStatus: 'PAID',
@@ -108,13 +144,14 @@ export default function POSPage() {
       const res = await api.post('/invoices', invoicePayload);
       setActiveReceipt(res.data);
       setCart([]);
-      setDiscount(0);
+      setDiscountValue(0);
       setCustName('');
       setCustPhone('');
       setSelectedCustomerId('');
     } catch {
       setActiveReceipt({ ...invoicePayload, invoiceNumber: `INV-${Date.now().toString().slice(-5)}` });
       setCart([]);
+      setDiscountValue(0);
       setCustName('');
       setCustPhone('');
       setSelectedCustomerId('');
@@ -133,11 +170,15 @@ export default function POSPage() {
         <TableFilter
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          placeholder="Search products by name..."
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onCategorySelect={setSelectedCategory}
+          placeholder="Search products by name or category..."
         />
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {products
-            .filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+            .filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase())))
+            .filter((p) => !selectedCategory || p.category === selectedCategory)
             .map((product) => {
               const cartItem = cart.find((item) => item._id === product._id);
               const qtyInCart = cartItem ? cartItem.qty : 0;
@@ -287,7 +328,7 @@ export default function POSPage() {
           </div>
         </div>
 
-        {/* Checkout Calculation */}
+        {/* Checkout Calculation & Discount */}
         <div className="border-t border-slate-100 pt-4 mt-4 space-y-3">
           <div className="flex justify-between text-sm text-slate-600 font-medium">
             <span>Subtotal</span>
@@ -297,15 +338,86 @@ export default function POSPage() {
             <span>GST Tax</span>
             <span>₹{cartTaxTotal.toFixed(2)}</span>
           </div>
+
+          {/* Discount Input Section */}
+          <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-700">Apply Discount</span>
+              <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setDiscountType('FIXED')}
+                  className={`px-2 py-0.5 rounded-md transition-colors ${
+                    discountType === 'FIXED' ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  ₹ Flat
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDiscountType('PERCENT')}
+                  className={`px-2 py-0.5 rounded-md transition-colors ${
+                    discountType === 'PERCENT' ? 'bg-amber-600 text-white shadow-xs' : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  % Percentage
+                </button>
+              </div>
+            </div>
+
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-xs font-bold text-slate-500 pointer-events-none">
+                {discountType === 'FIXED' ? '₹' : '%'}
+              </span>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                placeholder={discountType === 'FIXED' ? 'Discount Amount (₹)' : 'Discount Percentage (%)'}
+                value={discountValue || ''}
+                onChange={(e) => setDiscountValue(Math.max(0, parseFloat(e.target.value) || 0))}
+                className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+          </div>
+
+          {calculatedDiscount > 0 && (
+            <div className="flex justify-between text-sm text-emerald-600 font-bold bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">
+              <span>Discount {discountType === 'PERCENT' ? `(${discountValue}%)` : ''}</span>
+              <span>-₹{calculatedDiscount.toFixed(2)}</span>
+            </div>
+          )}
+
+          {/* Payment Mode Selector */}
+          <div className="pt-1">
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">Payment Method</label>
+            <div className="grid grid-cols-4 gap-1.5">
+              {(['CASH', 'UPI', 'CARD', 'CREDIT'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setPaymentMode(mode)}
+                  className={`py-1.5 text-xs font-extrabold rounded-lg border transition-all ${
+                    paymentMode === mode
+                      ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="flex justify-between text-sm font-black text-slate-900 text-lg border-t border-slate-100 pt-2">
             <span>Grand Total</span>
-            <span className="text-blue-600">₹{cartGrandTotal.toFixed(2)}</span>
+            <span className="text-amber-600">₹{cartGrandTotal.toFixed(2)}</span>
           </div>
 
           <button
             onClick={handleCheckout}
             disabled={cart.length === 0}
-            className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-extrabold text-base shadow-lg transition-all flex items-center justify-center gap-2 mt-2"
+            className="w-full h-12 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-extrabold text-base shadow-lg shadow-amber-600/20 transition-all flex items-center justify-center gap-2 mt-2 cursor-pointer"
           >
             <Printer className="w-5 h-5" /> Generate & Print Bill
           </button>
@@ -314,59 +426,150 @@ export default function POSPage() {
 
       {/* Invoice Receipt Printable Modal */}
       {activeReceipt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 font-mono text-slate-900 border border-slate-200">
-            <div className="text-center border-b border-dashed border-slate-300 pb-3">
-              <h2 className="font-extrabold text-xl">BILLING PRO STORE</h2>
-              <p className="text-xs text-slate-500">Offline Receipt</p>
-              <p className="text-xs text-slate-500">Invoice: {activeReceipt.invoiceNumber}</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4 font-mono text-slate-900 border border-slate-200 my-auto">
+            
+            {/* Real POS Receipt Slip Content */}
+            <div id="printable-receipt" className="space-y-3 bg-white text-black p-1 text-xs">
+              
+              {/* Store Header */}
+              <div className="text-center space-y-1">
+                <div className="font-extrabold text-base tracking-tight uppercase border-b border-black pb-1">
+                  🛠️ {settings.storeName || 'BUILDPRO HARDWARE STORE'}
+                </div>
+                {settings.tagline && (
+                  <p className="text-[11px] font-medium leading-tight">
+                    {settings.tagline}
+                  </p>
+                )}
+                {settings.address && (
+                  <p className="text-[10px]">{settings.address}</p>
+                )}
+                {(settings.gstin || settings.phone) && (
+                  <p className="text-[10px] font-bold">
+                    {settings.gstin ? `GSTIN: ${settings.gstin}` : ''} {settings.gstin && settings.phone ? '|' : ''} {settings.phone ? `Ph: ${settings.phone}` : ''}
+                  </p>
+                )}
+                <div className="border-t border-dashed border-black my-1" />
+                <p className="text-[11px] font-bold tracking-widest uppercase">*** TAX INVOICE / BILL SLIP ***</p>
+              </div>
+
+              {/* Receipt Details */}
+              <div className="border-t border-dashed border-black pt-1.5 space-y-0.5 text-[11px]">
+                <div className="flex justify-between">
+                  <span className="font-bold">Invoice No:</span>
+                  <span>{activeReceipt.invoiceNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-bold">Date & Time:</span>
+                  <span>{activeReceipt.createdAt ? new Date(activeReceipt.createdAt).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }) : new Date().toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-bold">Customer:</span>
+                  <span className="font-bold truncate max-w-[150px] text-right">{activeReceipt.customerName || 'Walk-in Guest'}</span>
+                </div>
+                {activeReceipt.customerPhone && (
+                  <div className="flex justify-between">
+                    <span className="font-bold">Mobile:</span>
+                    <span>{activeReceipt.customerPhone}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="font-bold">Counter/Billed By:</span>
+                  <span>POS Terminal 01</span>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <div className="border-t border-dashed border-black pt-1.5">
+                <div className="grid grid-cols-12 font-bold text-[10px] uppercase border-b border-black pb-1 mb-1">
+                  <span className="col-span-6">Item Description</span>
+                  <span className="col-span-2 text-center">Qty</span>
+                  <span className="col-span-4 text-right">Amount (₹)</span>
+                </div>
+
+                <div className="space-y-1.5 py-1">
+                  {activeReceipt.items.map((item, idx) => (
+                    <div key={idx} className="grid grid-cols-12 text-[11px] leading-tight">
+                      <div className="col-span-6 pr-1">
+                        <div className="font-bold truncate">{item.name}</div>
+                        <div className="text-[9px] text-slate-700">@ ₹{item.price} ({item.taxRate || 0}% GST)</div>
+                      </div>
+                      <div className="col-span-2 text-center font-bold">{item.qty}</div>
+                      <div className="col-span-4 text-right font-bold">₹{item.subtotal.toFixed(2)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Financial Calculations */}
+              <div className="border-t border-dashed border-black pt-2 space-y-1 text-[11px]">
+                <div className="flex justify-between">
+                  <span>Items Subtotal:</span>
+                  <span>₹{activeReceipt.subtotal?.toFixed(2)}</span>
+                </div>
+                
+                {/* GST Tax Breakdown */}
+                {activeReceipt.taxTotal > 0 && (
+                  <>
+                    <div className="flex justify-between text-[10px]">
+                      <span>CGST (Half Tax):</span>
+                      <span>₹{(activeReceipt.taxTotal / 2).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px]">
+                      <span>SGST (Half Tax):</span>
+                      <span>₹{(activeReceipt.taxTotal / 2).toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
+
+                {activeReceipt.discount > 0 && (
+                  <div className="flex justify-between font-bold">
+                    <span>Discount Offered:</span>
+                    <span>-₹{activeReceipt.discount.toFixed(2)}</span>
+                  </div>
+                )}
+
+                <div className="border-t-2 border-b-2 border-black py-1 flex justify-between font-black text-sm my-1">
+                  <span>NET PAYABLE:</span>
+                  <span>₹{activeReceipt.grandTotal.toFixed(2)}</span>
+                </div>
+
+                <div className="flex justify-between font-bold pt-0.5">
+                  <span>Payment Mode:</span>
+                  <span className="uppercase">{activeReceipt.paymentMode || 'CASH'}</span>
+                </div>
+                <div className="flex justify-between font-bold text-[10px] text-emerald-800">
+                  <span>Payment Status:</span>
+                  <span>PAID / VERIFIED</span>
+                </div>
+              </div>
+
+              {/* Slip Footer Notes */}
+              <div className="border-t border-dashed border-black pt-2 text-center text-[10px] space-y-1">
+                {settings.thankYouNote && <p className="font-bold">{settings.thankYouNote}</p>}
+                {settings.returnPolicy && <p>{settings.returnPolicy}</p>}
+                {settings.footerNote && <p className="font-bold text-[9px] pt-1">{settings.footerNote}</p>}
+              </div>
+
             </div>
 
-            <div className="text-xs bg-slate-50 p-2 rounded border border-slate-200 space-y-0.5">
-              <div className="flex justify-between font-bold">
-                <span>Customer:</span>
-                <span>{activeReceipt.customerName || 'Walk-in Guest'}</span>
-              </div>
-              {activeReceipt.customerPhone && (
-                <div className="flex justify-between text-slate-600">
-                  <span>Phone:</span>
-                  <span>{activeReceipt.customerPhone}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2 text-xs">
-              {activeReceipt.items.map((item, idx) => (
-                <div key={idx} className="flex justify-between">
-                  <span>{item.name} (x{item.qty})</span>
-                  <span>₹{item.subtotal}</span>
-                </div>
-              ))}
-            </div>
-            <div className="border-t border-dashed border-slate-300 pt-3 text-xs space-y-1">
-              <div className="flex justify-between font-bold">
-                <span>Total Amount:</span>
-                <span>₹{activeReceipt.grandTotal}</span>
-              </div>
-              <div className="flex justify-between text-slate-500">
-                <span>Payment Mode:</span>
-                <span>{activeReceipt.paymentMode}</span>
-              </div>
-            </div>
-            <div className="flex gap-2 pt-2 font-sans">
+            {/* Modal Buttons (Hidden in print) */}
+            <div className="flex gap-2 pt-2 font-sans no-print">
               <button
                 onClick={() => window.print()}
-                className="flex-1 h-10 rounded-xl bg-blue-600 text-white font-bold text-xs"
+                className="flex-1 h-11 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
-                Print
+                <Printer className="w-4 h-4" /> Print Thermal Slip
               </button>
               <button
                 onClick={() => setActiveReceipt(null)}
-                className="px-4 h-10 rounded-xl border border-slate-200 font-bold text-xs text-slate-600"
+                className="px-4 h-11 rounded-xl border border-slate-200 hover:bg-slate-100 font-bold text-xs text-slate-600 cursor-pointer"
               >
                 Close
               </button>
             </div>
+
           </div>
         </div>
       )}

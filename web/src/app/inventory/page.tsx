@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Boxes, AlertTriangle, ArrowUpRight, ArrowDownRight, RefreshCw, Plus } from 'lucide-react';
 import { api, Product } from '@/lib/api';
 import { FormModal } from '@/components/shared/FormModal';
+import { TableFilter } from '@/components/shared/TableFilter';
 
 interface StockLog {
   _id: string;
@@ -19,6 +20,8 @@ export default function InventoryPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
   const [stockLogs, setStockLogs] = useState<StockLog[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
 
   // Adjustment Modal
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
@@ -38,9 +41,9 @@ export default function InventoryPage() {
         api.get('/products/low-stock'),
         api.get('/products/stock-logs'),
       ]);
-      setProducts(prodRes.data);
-      setLowStockProducts(lowRes.data);
-      setStockLogs(logsRes.data);
+      setProducts(prodRes.data || []);
+      setLowStockProducts(lowRes.data || []);
+      setStockLogs(logsRes.data || []);
     } catch (err) {
       console.error('Inventory fetch error', err);
     }
@@ -65,12 +68,16 @@ export default function InventoryPage() {
     }
   };
 
+  const filteredProducts = products.filter(
+    (p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2">
-            <Boxes className="w-7 h-7 text-blue-600" /> Inventory & Stock Management
+            <Boxes className="w-7 h-7 text-amber-600" /> Inventory & Stock Management
           </h2>
           <p className="text-slate-500 text-sm font-medium">
             Monitor real-time stock levels, low stock alerts, and audit logs
@@ -78,9 +85,9 @@ export default function InventoryPage() {
         </div>
         <button
           onClick={fetchInventoryData}
-          className="h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-sm transition-all flex items-center gap-2"
+          className="h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-sm transition-all flex items-center gap-2 cursor-pointer"
         >
-          <RefreshCw className="w-4 h-4 text-blue-600" /> Refresh Stock Data
+          <RefreshCw className="w-4 h-4 text-amber-600" /> Refresh Stock Data
         </button>
       </div>
 
@@ -98,7 +105,7 @@ export default function InventoryPage() {
         </div>
         <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
           <div className="text-xs font-bold text-slate-400 uppercase">Total Unit Inventory</div>
-          <div className="text-2xl font-black text-blue-600 mt-1">
+          <div className="text-2xl font-black text-amber-600 mt-1">
             {products.reduce((acc, p) => acc + (p.stock || 0), 0)} Units
           </div>
         </div>
@@ -126,7 +133,7 @@ export default function InventoryPage() {
                     setAdjustReason('Restock');
                     setIsAdjustModalOpen(true);
                   }}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-all"
+                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg transition-all cursor-pointer"
                 >
                   Restock
                 </button>
@@ -136,50 +143,99 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* Main Stock Table */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="font-bold text-slate-800 text-lg">Product Stock Directory</h3>
+      {/* Search & View Mode Switcher */}
+      <TableFilter
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        placeholder="Filter stock inventory by product name or SKU..."
+      />
+
+      {/* Main Stock Table vs Card Grid */}
+      {viewMode === 'table' ? (
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 className="font-bold text-slate-800 text-lg">Product Stock Directory</h3>
+          </div>
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-xs font-extrabold text-slate-500 uppercase">
+                <th className="p-4">Product</th>
+                <th className="p-4">SKU / Barcode</th>
+                <th className="p-4">Current Stock</th>
+                <th className="p-4">Status</th>
+                <th className="p-4 text-right">Adjust Stock</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-sm font-semibold text-slate-700">
+              {filteredProducts.map((prod) => (
+                <tr key={prod._id} className="hover:bg-slate-50/80">
+                  <td className="p-4 font-bold text-slate-900">{prod.name}</td>
+                  <td className="p-4 font-mono text-xs text-slate-500">{prod.sku || prod.barcode || 'N/A'}</td>
+                  <td className="p-4 font-extrabold text-slate-900">{prod.stock} {prod.unit}</td>
+                  <td className="p-4">
+                    {prod.stock <= 5 ? (
+                      <span className="px-2.5 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-lg">Low Stock</span>
+                    ) : (
+                      <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-lg">In Stock</span>
+                    )}
+                  </td>
+                  <td className="p-4 text-right">
+                    <button
+                      onClick={() => {
+                        setSelectedProduct(prod);
+                        setIsAdjustModalOpen(true);
+                      }}
+                      className="h-8 px-3 border border-slate-200 rounded-lg text-xs font-bold text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
+                    >
+                      + / - Adjust
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-200 text-xs font-extrabold text-slate-500 uppercase">
-              <th className="p-4">Product</th>
-              <th className="p-4">SKU / Barcode</th>
-              <th className="p-4">Current Stock</th>
-              <th className="p-4">Status</th>
-              <th className="p-4 text-right">Adjust Stock</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 text-sm font-semibold text-slate-700">
-            {products.map((prod) => (
-              <tr key={prod._id} className="hover:bg-slate-50/80">
-                <td className="p-4 font-bold text-slate-900">{prod.name}</td>
-                <td className="p-4 font-mono text-xs text-slate-500">{prod.sku || prod.barcode || 'N/A'}</td>
-                <td className="p-4 font-extrabold text-slate-900">{prod.stock} {prod.unit}</td>
-                <td className="p-4">
+      ) : (
+        /* Inventory Card Grid View */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredProducts.map((prod) => (
+            <div key={prod._id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs text-slate-400 font-mono">SKU: {prod.sku || 'N/A'}</span>
                   {prod.stock <= 5 ? (
                     <span className="px-2.5 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-lg">Low Stock</span>
                   ) : (
-                    <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-lg">In Stock</span>
+                    <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg">In Stock</span>
                   )}
-                </td>
-                <td className="p-4 text-right">
-                  <button
-                    onClick={() => {
-                      setSelectedProduct(prod);
-                      setIsAdjustModalOpen(true);
-                    }}
-                    className="h-8 px-3 border border-slate-200 rounded-lg text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors"
-                  >
-                    + / - Adjust
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                </div>
+
+                <h3 className="font-extrabold text-slate-900 text-base">{prod.name}</h3>
+                <span className="text-xs text-slate-500 font-medium block mt-1">Category: {prod.category || 'General'}</span>
+
+                <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+                  <span className="text-xs text-slate-500 font-bold uppercase">Stock On Hand</span>
+                  <span className="text-lg font-black text-slate-900">{prod.stock} {prod.unit}</span>
+                </div>
+              </div>
+
+              <div className="pt-4 mt-4 border-t border-slate-100">
+                <button
+                  onClick={() => {
+                    setSelectedProduct(prod);
+                    setIsAdjustModalOpen(true);
+                  }}
+                  className="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  + / - Adjust Stock Quantity
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Audit Log Table */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
