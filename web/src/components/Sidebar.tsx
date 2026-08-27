@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShoppingCart, Package, Users, Receipt } from 'lucide-react';
+import { ShoppingCart, Package, Users, Receipt, Boxes } from 'lucide-react';
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -11,6 +11,7 @@ export function Sidebar() {
   const navItems = [
     { href: '/', label: 'POS Console', icon: ShoppingCart },
     { href: '/products', label: 'Products Catalog', icon: Package },
+    { href: '/inventory', label: 'Inventory Manager', icon: Boxes },
     { href: '/invoices', label: 'Invoices History', icon: Receipt },
     { href: '/customers', label: 'Customers Directory', icon: Users },
   ];

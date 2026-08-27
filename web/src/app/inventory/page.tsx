@@ -1,0 +1,286 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Boxes, AlertTriangle, ArrowUpRight, ArrowDownRight, RefreshCw, Plus } from 'lucide-react';
+import { api, Product } from '@/lib/api';
+import { FormModal } from '@/components/shared/FormModal';
+
+interface StockLog {
+  _id: string;
+  productId: string;
+  productName: string;
+  type: 'IN' | 'OUT' | 'ADJUSTMENT';
+  quantity: number;
+  reason: string;
+  createdAt: string;
+}
+
+export default function InventoryPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
+  const [stockLogs, setStockLogs] = useState<StockLog[]>([]);
+
+  // Adjustment Modal
+  const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [adjustType, setAdjustType] = useState<'IN' | 'OUT' | 'ADJUSTMENT'>('IN');
+  const [adjustQty, setAdjustQty] = useState<number>(0);
+  const [adjustReason, setAdjustReason] = useState<string>('Restock / Purchase');
+
+  useEffect(() => {
+    fetchInventoryData();
+  }, []);
+
+  const fetchInventoryData = async () => {
+    try {
+      const [prodRes, lowRes, logsRes] = await Promise.all([
+        api.get('/products'),
+        api.get('/products/low-stock'),
+        api.get('/products/stock-logs'),
+      ]);
+      setProducts(prodRes.data);
+      setLowStockProducts(lowRes.data);
+      setStockLogs(logsRes.data);
+    } catch (err) {
+      console.error('Inventory fetch error', err);
+    }
+  };
+
+  const handleStockAdjustment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProduct) return;
+
+    try {
+      await api.post(`/products/${selectedProduct._id}/adjust-stock`, {
+        type: adjustType,
+        quantity: adjustQty,
+        reason: adjustReason,
+      });
+      setIsAdjustModalOpen(false);
+      setSelectedProduct(null);
+      setAdjustQty(0);
+      fetchInventoryData();
+    } catch (err) {
+      console.error('Stock adjust error', err);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2">
+            <Boxes className="w-7 h-7 text-blue-600" /> Inventory & Stock Management
+          </h2>
+          <p className="text-slate-500 text-sm font-medium">
+            Monitor real-time stock levels, low stock alerts, and audit logs
+          </p>
+        </div>
+        <button
+          onClick={fetchInventoryData}
+          className="h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-sm transition-all flex items-center gap-2"
+        >
+          <RefreshCw className="w-4 h-4 text-blue-600" /> Refresh Stock Data
+        </button>
+      </div>
+
+      {/* Summary Alert Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+          <div className="text-xs font-bold text-slate-400 uppercase">Total Items Tracked</div>
+          <div className="text-2xl font-black text-slate-900 mt-1">{products.length} Products</div>
+        </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-sm">
+          <div className="text-xs font-bold text-amber-700 uppercase flex items-center gap-1">
+            <AlertTriangle className="w-4 h-4" /> Low Stock Alerts
+          </div>
+          <div className="text-2xl font-black text-amber-900 mt-1">{lowStockProducts.length} Items Low</div>
+        </div>
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+          <div className="text-xs font-bold text-slate-400 uppercase">Total Unit Inventory</div>
+          <div className="text-2xl font-black text-blue-600 mt-1">
+            {products.reduce((acc, p) => acc + (p.stock || 0), 0)} Units
+          </div>
+        </div>
+      </div>
+
+      {/* Low Stock Alert Table */}
+      {lowStockProducts.length > 0 && (
+        <div className="bg-amber-500/10 border border-amber-200 rounded-2xl p-5 space-y-3">
+          <h3 className="font-bold text-amber-900 text-base flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-amber-600" /> Critical Low Stock Items
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {lowStockProducts.map((item) => (
+              <div key={item._id} className="bg-white border border-amber-200 rounded-xl p-3 flex items-center justify-between shadow-sm">
+                <div>
+                  <h5 className="font-bold text-slate-800 text-sm">{item.name}</h5>
+                  <span className="text-xs text-amber-700 font-bold">
+                    Stock: {item.stock} {item.unit} (Alert at ≤5)
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedProduct(item);
+                    setAdjustType('IN');
+                    setAdjustReason('Restock');
+                    setIsAdjustModalOpen(true);
+                  }}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg transition-all"
+                >
+                  Restock
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Main Stock Table */}
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="font-bold text-slate-800 text-lg">Product Stock Directory</h3>
+        </div>
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-200 text-xs font-extrabold text-slate-500 uppercase">
+              <th className="p-4">Product</th>
+              <th className="p-4">SKU / Barcode</th>
+              <th className="p-4">Current Stock</th>
+              <th className="p-4">Status</th>
+              <th className="p-4 text-right">Adjust Stock</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 text-sm font-semibold text-slate-700">
+            {products.map((prod) => (
+              <tr key={prod._id} className="hover:bg-slate-50/80">
+                <td className="p-4 font-bold text-slate-900">{prod.name}</td>
+                <td className="p-4 font-mono text-xs text-slate-500">{prod.sku || prod.barcode || 'N/A'}</td>
+                <td className="p-4 font-extrabold text-slate-900">{prod.stock} {prod.unit}</td>
+                <td className="p-4">
+                  {prod.stock <= 5 ? (
+                    <span className="px-2.5 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-lg">Low Stock</span>
+                  ) : (
+                    <span className="px-2.5 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-lg">In Stock</span>
+                  )}
+                </td>
+                <td className="p-4 text-right">
+                  <button
+                    onClick={() => {
+                      setSelectedProduct(prod);
+                      setIsAdjustModalOpen(true);
+                    }}
+                    className="h-8 px-3 border border-slate-200 rounded-lg text-xs font-bold text-blue-600 hover:bg-blue-50 transition-colors"
+                  >
+                    + / - Adjust
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Audit Log Table */}
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+        <div className="px-6 py-4 border-b border-slate-100">
+          <h3 className="font-bold text-slate-800 text-lg">Recent Stock Movement Logs</h3>
+        </div>
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-200 text-xs font-extrabold text-slate-500 uppercase">
+              <th className="p-4">Timestamp</th>
+              <th className="p-4">Product</th>
+              <th className="p-4">Movement</th>
+              <th className="p-4">Qty</th>
+              <th className="p-4">Reason / Reference</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 text-sm font-semibold text-slate-700">
+            {stockLogs.map((log) => (
+              <tr key={log._id} className="hover:bg-slate-50/80">
+                <td className="p-4 text-xs font-medium text-slate-500">
+                  {new Date(log.createdAt).toLocaleString()}
+                </td>
+                <td className="p-4 font-bold text-slate-900">{log.productName}</td>
+                <td className="p-4">
+                  {log.type === 'IN' && (
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">
+                      <ArrowDownRight className="w-3.5 h-3.5" /> Stock In
+                    </span>
+                  )}
+                  {log.type === 'OUT' && (
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-700 bg-rose-100 px-2 py-0.5 rounded-md">
+                      <ArrowUpRight className="w-3.5 h-3.5" /> Stock Out
+                    </span>
+                  )}
+                  {log.type === 'ADJUSTMENT' && (
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-md">
+                      Set Fixed
+                    </span>
+                  )}
+                </td>
+                <td className="p-4 font-extrabold text-slate-900">{log.quantity}</td>
+                <td className="p-4 text-xs font-medium text-slate-600">{log.reason || '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Adjust Stock FormModal */}
+      <FormModal
+        isOpen={isAdjustModalOpen}
+        onClose={() => setIsAdjustModalOpen(false)}
+        title={`Adjust Stock - ${selectedProduct?.name}`}
+        onSubmit={handleStockAdjustment}
+      >
+        <div>
+          <label className="block text-xs font-bold text-slate-700 mb-1">Adjustment Type</label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setAdjustType('IN')}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
+                adjustType === 'IN' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-slate-50 text-slate-600 border-slate-200'
+              }`}
+            >
+              + Stock In (Add)
+            </button>
+            <button
+              type="button"
+              onClick={() => setAdjustType('OUT')}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
+                adjustType === 'OUT' ? 'bg-rose-600 text-white border-rose-600' : 'bg-slate-50 text-slate-600 border-slate-200'
+              }`}
+            >
+              - Stock Out (Remove)
+            </button>
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-slate-700 mb-1">Quantity</label>
+          <input
+            type="number"
+            required
+            min="1"
+            value={adjustQty}
+            onChange={(e) => setAdjustQty(Number(e.target.value))}
+            className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-slate-700 mb-1">Reason / Notes</label>
+          <input
+            type="text"
+            required
+            value={adjustReason}
+            onChange={(e) => setAdjustReason(e.target.value)}
+            placeholder="e.g. Supplier Shipment / Damaged Stock"
+            className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500"
+          />
+        </div>
+      </FormModal>
+    </div>
+  );
+}

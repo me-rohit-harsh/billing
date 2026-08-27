@@ -8,6 +8,7 @@ import { Product, ProductSchema } from './schemas/product.schema';
 import { Category, CategorySchema } from './schemas/category.schema';
 import { Customer, CustomerSchema } from './schemas/customer.schema';
 import { Invoice, InvoiceSchema } from './schemas/invoice.schema';
+import { StockLog, StockLogSchema } from './schemas/stock-log.schema';
 
 import { ProductsController } from './products/products.controller';
 import { InvoicesController } from './invoices/invoices.controller';
@@ -28,6 +29,7 @@ import { CustomersController, CategoriesController } from './controllers/support
       { name: Category.name, schema: CategorySchema },
       { name: Customer.name, schema: CustomerSchema },
       { name: Invoice.name, schema: InvoiceSchema },
+      { name: StockLog.name, schema: StockLogSchema },
     ]),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'storage', 'uploads'),

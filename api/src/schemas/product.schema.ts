@@ -29,6 +29,9 @@ export class Product {
   @Prop({ default: 0 })
   stock: number;
 
+  @Prop({ default: 5 })
+  minStockAlert: number;
+
   @Prop({ default: 'pcs' })
   unit: string;
 

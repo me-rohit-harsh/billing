@@ -1,15 +1,21 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Printer, Package, Plus, Minus } from 'lucide-react';
+import { ShoppingCart, Printer, Package, Plus, Minus, UserCheck } from 'lucide-react';
 import { api, Product, Customer, Invoice } from '@/lib/api';
 import { TableFilter } from '@/components/shared/TableFilter';
+import { CustomDropdown } from '@/components/shared/CustomDropdown';
 
 export default function POSPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [cart, setCart] = useState<(Product & { qty: number })[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+  
+  // Optional Walk-in / Direct Customer details
+  const [custName, setCustName] = useState<string>('');
+  const [custPhone, setCustPhone] = useState<string>('');
+
   const [discount, setDiscount] = useState<number>(0);
   const [paymentMode, setPaymentMode] = useState<'CASH' | 'UPI' | 'CARD' | 'CREDIT'>('CASH');
   const [searchQuery, setSearchQuery] = useState('');
@@ -71,9 +77,12 @@ export default function POSPage() {
     if (cart.length === 0) return;
     const selectedCust = customers.find((c) => c._id === selectedCustomerId);
 
+    const finalCustomerName = selectedCust ? selectedCust.name : (custName.trim() || 'Walk-in Customer');
+    const finalCustomerPhone = selectedCust ? (selectedCust.phone || '') : custPhone.trim();
+
     const invoicePayload: Invoice = {
-      customerName: selectedCust ? selectedCust.name : 'Walk-in Customer',
-      customerPhone: selectedCust ? selectedCust.phone : '',
+      customerName: finalCustomerName,
+      customerPhone: finalCustomerPhone,
       items: cart.map((item) => ({
         productId: item._id,
         name: item.name,
@@ -96,11 +105,22 @@ export default function POSPage() {
       setActiveReceipt(res.data);
       setCart([]);
       setDiscount(0);
+      setCustName('');
+      setCustPhone('');
+      setSelectedCustomerId('');
     } catch {
       setActiveReceipt({ ...invoicePayload, invoiceNumber: `INV-${Date.now().toString().slice(-5)}` });
       setCart([]);
+      setCustName('');
+      setCustPhone('');
+      setSelectedCustomerId('');
     }
   };
+
+  const customerOptions = [
+    { _id: '', name: 'Walk-in Customer (Guest)' },
+    ...customers.map((c) => ({ _id: c._id, name: `${c.name} ${c.phone ? `(${c.phone})` : ''}` })),
+  ];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -149,7 +169,6 @@ export default function POSPage() {
                     </div>
                   </div>
 
-                  {/* Direct Add to Cart / Quantity Stepper */}
                   {qtyInCart === 0 ? (
                     <button
                       onClick={() => addToCart(product)}
@@ -190,7 +209,48 @@ export default function POSPage() {
             </span>
           </h2>
 
-          <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1">
+          {/* Optional Customer Selection / Details Section */}
+          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 mb-4 space-y-2.5">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+              <UserCheck className="w-4 h-4 text-blue-600" /> Customer Details <span className="text-slate-400 font-normal">(Optional)</span>
+            </div>
+
+            <CustomDropdown
+              options={customerOptions}
+              value={selectedCustomerId}
+              onChange={(val) => {
+                setSelectedCustomerId(val);
+                const selected = customers.find((c) => c._id === val);
+                if (selected) {
+                  setCustName(selected.name);
+                  setCustPhone(selected.phone || '');
+                }
+              }}
+              placeholder="Select Existing Customer"
+              compact
+            />
+
+            {!selectedCustomerId && (
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <input
+                  type="text"
+                  placeholder="Customer Name (Optional)"
+                  value={custName}
+                  onChange={(e) => setCustName(e.target.value)}
+                  className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500"
+                />
+                <input
+                  type="text"
+                  placeholder="Mobile No (Optional)"
+                  value={custPhone}
+                  onChange={(e) => setCustPhone(e.target.value)}
+                  className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
             {cart.length === 0 ? (
               <p className="text-center py-10 text-slate-400 font-medium text-sm">
                 Cart is empty. Click products to add.
@@ -257,6 +317,20 @@ export default function POSPage() {
               <p className="text-xs text-slate-500">Offline Receipt</p>
               <p className="text-xs text-slate-500">Invoice: {activeReceipt.invoiceNumber}</p>
             </div>
+
+            <div className="text-xs bg-slate-50 p-2 rounded border border-slate-200 space-y-0.5">
+              <div className="flex justify-between font-bold">
+                <span>Customer:</span>
+                <span>{activeReceipt.customerName || 'Walk-in Guest'}</span>
+              </div>
+              {activeReceipt.customerPhone && (
+                <div className="flex justify-between text-slate-600">
+                  <span>Phone:</span>
+                  <span>{activeReceipt.customerPhone}</span>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-2 text-xs">
               {activeReceipt.items.map((item, idx) => (
                 <div key={idx} className="flex justify-between">
@@ -275,7 +349,7 @@ export default function POSPage() {
                 <span>{activeReceipt.paymentMode}</span>
               </div>
             </div>
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2 pt-2 font-sans">
               <button
                 onClick={() => window.print()}
                 className="flex-1 h-10 rounded-xl bg-blue-600 text-white font-bold text-xs"
