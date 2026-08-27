@@ -1,20 +1,45 @@
 import axios from 'axios';
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api';
-export const API_BASE_ORIGIN = API_URL.replace(/\/api\/?$/, '');
+export function getApiUrl(): string {
+  if (typeof window !== 'undefined') {
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const envUrl = process.env.NEXT_PUBLIC_API_URL;
+    
+    // On production/live domains, prevent any fallback to localhost (avoids Chrome PNA local network access prompt)
+    if (!isLocalhost) {
+      if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+        return envUrl;
+      }
+      return '/api';
+    }
+  }
+
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5005/api';
+}
+
+export function getApiBaseOrigin(): string {
+  const url = getApiUrl();
+  if (url.startsWith('/')) {
+    return typeof window !== 'undefined' ? window.location.origin : '';
+  }
+  return url.replace(/\/api\/?$/, '');
+}
 
 export function getImageUrl(path?: string): string {
   if (!path) return '';
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  return `${API_BASE_ORIGIN}${cleanPath}`;
+  const origin = getApiBaseOrigin();
+  return `${origin}${cleanPath}`;
 }
 
-export const api = axios.create({
-  baseURL: API_URL,
-});
+export const API_URL = getApiUrl();
+export const API_BASE_ORIGIN = getApiBaseOrigin();
+
+export const api = axios.create();
 
 api.interceptors.request.use((config) => {
+  config.baseURL = getApiUrl();
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('billing_auth_token');
     if (token) {
