@@ -37,6 +37,7 @@ import {
 import { api, Invoice, Product, Customer } from '@/lib/api';
 import { CustomDropdown } from '@/components/shared/CustomDropdown';
 import { useToast } from '@/context/ToastContext';
+import { exportToCSV } from '@/lib/exportUtils';
 
 // Color Palette for Charts
 const COLORS = ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EC4899', '#06B6D4'];
@@ -265,6 +266,31 @@ export default function DashboardPage() {
     };
   }, [serverStats, rawInvoices, rawProducts, rawCustomers, timeRange]);
 
+  const exportCSVData = () => {
+    const summaryData = [
+      { Metric: 'Total Sales Revenue (₹)', Value: dashboardStats.kpi.totalRevenue },
+      { Metric: 'Total Invoices / Orders', Value: dashboardStats.kpi.totalInvoices },
+      { Metric: 'Average Order Value (₹)', Value: dashboardStats.kpi.averageOrderValue },
+      { Metric: 'Net GST Tax Output (₹)', Value: dashboardStats.kpi.totalTax },
+      { Metric: 'Total Products Count', Value: dashboardStats.kpi.totalProductsCount },
+      { Metric: 'Total Units in Stock', Value: dashboardStats.kpi.totalStockUnits },
+      { Metric: 'Total Stock Valuation (₹)', Value: dashboardStats.kpi.totalStockValuation },
+      { Metric: 'Low Stock Items Count', Value: dashboardStats.kpi.lowStockCount },
+      { Metric: 'Total Customers Count', Value: dashboardStats.kpi.totalCustomersCount },
+    ];
+
+    const fields = [
+      { key: 'Metric', label: 'Analytics Metric' },
+      { key: 'Value', label: 'Recorded Value' },
+    ];
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const success = exportToCSV(`dashboard_analytics_${timeRange}_${dateStr}`, summaryData, fields);
+    if (success) {
+      toast.success('Exported dashboard analytics summary to CSV!');
+    }
+  };
+
   const exportReport = () => {
     const reportText = `BUILDPRO HARDWARE POS - REAL BUSINESS ANALYTICS REPORT
 Generated: ${new Date().toLocaleString()}
@@ -325,8 +351,18 @@ ${dashboardStats.topProducts.length > 0 ? dashboardStats.topProducts.map((p, i) 
           </div>
 
           <button
+            onClick={exportCSVData}
+            className="h-11 px-3.5 sm:px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm transition-all flex items-center gap-2 shadow-xs shrink-0 cursor-pointer"
+            title="Export Summary CSV"
+          >
+            <Download className="w-4 h-4 text-emerald-600" />
+            <span>Export CSV</span>
+          </button>
+
+          <button
             onClick={exportReport}
             className="h-11 px-3.5 sm:px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm transition-all flex items-center gap-2 shadow-xs shrink-0 cursor-pointer"
+            title="Export Full Text Report"
           >
             <Download className="w-4 h-4 text-blue-600" />
             <span>Export Report</span>

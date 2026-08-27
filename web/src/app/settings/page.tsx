@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useStoreSettings, defaultStoreSettings } from '@/context/StoreSettingsContext';
 import { useToast } from '@/context/ToastContext';
-import { Store, Tag, MapPin, FileText, Phone, HeartHandshake, ShieldAlert, Sparkles, Save, CheckCircle2 } from 'lucide-react';
+import { Store, Tag, MapPin, FileText, Phone, HeartHandshake, ShieldAlert, Sparkles, Save, CheckCircle2, Download } from 'lucide-react';
+import { exportToJSON } from '@/lib/exportUtils';
 
 export default function SettingsPage() {
   const { settings, updateSettings, resetSettings } = useStoreSettings();
@@ -17,6 +18,14 @@ export default function SettingsPage() {
 
   const handleChange = (field: keyof typeof settings, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleExportSettings = () => {
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const success = exportToJSON(`store_settings_backup_${dateStr}`, formData);
+    if (success) {
+      toast.success('Exported store settings backup to JSON!');
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -65,12 +74,22 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {isSavedAlert && (
-          <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2 rounded-xl font-bold text-xs animate-in fade-in duration-200">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>Store settings saved successfully!</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleExportSettings}
+            className="h-11 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+            title="Export Settings Backup"
+          >
+            <Download className="w-4 h-4 text-amber-600" /> Export Backup
+          </button>
+          {isSavedAlert && (
+            <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2 rounded-xl font-bold text-xs animate-in fade-in duration-200">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>Saved!</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

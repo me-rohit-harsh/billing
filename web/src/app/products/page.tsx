@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Plus, Trash2, Package, Edit, History, ArrowDownRight, ArrowUpRight, FolderPlus, Tags } from 'lucide-react';
+import { Plus, Trash2, Package, Edit, History, ArrowDownRight, ArrowUpRight, FolderPlus, Tags, Download } from 'lucide-react';
 import { api, Product } from '@/lib/api';
 import { FormModal } from '@/components/shared/FormModal';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import { TableFilter } from '@/components/shared/TableFilter';
 import { CustomDropdown } from '@/components/shared/CustomDropdown';
 import { useToast } from '@/context/ToastContext';
+import { exportToCSV } from '@/lib/exportUtils';
 
 interface StockLog {
   _id: string;
@@ -32,12 +33,14 @@ function ProductsContent() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState(initialCategoryParam);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    initialCategoryParam ? [initialCategoryParam] : []
+  );
   const [categories, setCategories] = useState<CategoryItem[]>([]);
 
   useEffect(() => {
     if (initialCategoryParam) {
-      setSelectedCategory(initialCategoryParam);
+      setSelectedCategories([initialCategoryParam]);
     }
   }, [initialCategoryParam]);
   
@@ -259,7 +262,36 @@ function ProductsContent() {
 
   const filteredProducts = products
     .filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase())))
-    .filter((p) => !selectedCategory || p.category === selectedCategory);
+    .filter((p) => {
+      if (!selectedCategories || selectedCategories.length === 0) return true;
+      return (
+        selectedCategories.includes(p.category) ||
+        categories.some((c) => selectedCategories.includes(c._id) && c.name === p.category)
+      );
+    });
+
+  const handleExportProducts = () => {
+    if (filteredProducts.length === 0) {
+      toast.error('No products available to export.');
+      return;
+    }
+    const fields = [
+      { key: 'name', label: 'Product Name' },
+      { key: 'sku', label: 'SKU' },
+      { key: 'barcode', label: 'Barcode' },
+      { key: 'category', label: 'Category' },
+      { key: 'price', label: 'Selling Price (₹)' },
+      { key: 'costPrice', label: 'Cost Price (₹)' },
+      { key: 'stock', label: 'Stock Level' },
+      { key: 'unit', label: 'Unit' },
+      { key: 'taxRate', label: 'Tax Rate (%)' },
+    ];
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const success = exportToCSV(`products_catalog_${dateStr}`, filteredProducts, fields);
+    if (success) {
+      toast.success(`Exported ${filteredProducts.length} product(s) to CSV!`);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -269,22 +301,39 @@ function ProductsContent() {
           <p className="text-slate-500 text-sm font-medium">Manage product details, stock levels, and audit history</p>
         </div>
 
-        <button
-          onClick={openCreateModal}
-          className="h-11 px-5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer"
-        >
-          <Plus className="w-4 h-4" /> Add Product
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportProducts}
+            className="h-11 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+            title="Export Products CSV"
+          >
+            <Download className="w-4 h-4 text-amber-600" /> Export CSV
+          </button>
+          <button
+            onClick={openCreateModal}
+            className="h-11 px-5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> Add Product
+          </button>
+        </div>
       </div>
 
       <TableFilter
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         categories={categories}
-        selectedCategory={selectedCategory}
-        onCategorySelect={setSelectedCategory}
+        selectedCategory={selectedCategories}
+        onCategorySelect={(val) => {
+          if (Array.isArray(val)) {
+            setSelectedCategories(val);
+          } else {
+            setSelectedCategories(val ? [val] : []);
+          }
+        }}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        onExport={handleExportProducts}
+        exportLabel="Export Products"
         placeholder="Filter products by name or category..."
       />
 

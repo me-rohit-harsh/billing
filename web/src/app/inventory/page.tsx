@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Boxes, AlertTriangle, ArrowUpRight, ArrowDownRight, RefreshCw, Plus } from 'lucide-react';
+import { Boxes, AlertTriangle, ArrowUpRight, ArrowDownRight, RefreshCw, Plus, Download } from 'lucide-react';
 import { api, Product } from '@/lib/api';
 import { FormModal } from '@/components/shared/FormModal';
 import { TableFilter } from '@/components/shared/TableFilter';
 import { useToast } from '@/context/ToastContext';
+import { exportToCSV } from '@/lib/exportUtils';
 
 interface StockLog {
   _id: string;
@@ -51,6 +52,46 @@ export default function InventoryPage() {
     }
   };
 
+  const handleExportInventoryStock = () => {
+    if (filteredProducts.length === 0) {
+      toast.error('No inventory products to export.');
+      return;
+    }
+    const fields = [
+      { key: 'name', label: 'Product Name' },
+      { key: 'sku', label: 'SKU' },
+      { key: 'category', label: 'Category' },
+      { key: 'stock', label: 'Stock On Hand' },
+      { key: 'unit', label: 'Unit' },
+      { key: 'price', label: 'Selling Price (₹)' },
+      { key: 'stockStatus', label: 'Stock Status', transform: (_: any, p: Product) => (p.stock <= 5 ? 'Low Stock Alert' : 'In Stock') },
+    ];
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const success = exportToCSV(`inventory_stock_${dateStr}`, filteredProducts, fields);
+    if (success) {
+      toast.success(`Exported ${filteredProducts.length} inventory item(s) to CSV!`);
+    }
+  };
+
+  const handleExportStockLogs = () => {
+    if (stockLogs.length === 0) {
+      toast.error('No stock movement logs to export.');
+      return;
+    }
+    const fields = [
+      { key: 'createdAt', label: 'Timestamp', transform: (val: string) => new Date(val).toLocaleString() },
+      { key: 'productName', label: 'Product Name' },
+      { key: 'type', label: 'Movement Type' },
+      { key: 'quantity', label: 'Quantity' },
+      { key: 'reason', label: 'Reason / Reference' },
+    ];
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const success = exportToCSV(`stock_movement_logs_${dateStr}`, stockLogs, fields);
+    if (success) {
+      toast.success(`Exported ${stockLogs.length} stock log(s) to CSV!`);
+    }
+  };
+
   const handleStockAdjustment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProduct) return;
@@ -87,12 +128,21 @@ export default function InventoryPage() {
             Monitor real-time stock levels, low stock alerts, and audit logs
           </p>
         </div>
-        <button
-          onClick={fetchInventoryData}
-          className="h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-sm transition-all flex items-center gap-2 cursor-pointer"
-        >
-          <RefreshCw className="w-4 h-4 text-amber-600" /> Refresh Stock Data
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportInventoryStock}
+            className="h-10 px-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Export Stock CSV"
+          >
+            <Download className="w-4 h-4 text-amber-600" /> Export Stock
+          </button>
+          <button
+            onClick={fetchInventoryData}
+            className="h-10 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+          >
+            <RefreshCw className="w-4 h-4 text-amber-600" /> Refresh Stock Data
+          </button>
+        </div>
       </div>
 
       {/* Summary Alert Cards */}
@@ -153,6 +203,8 @@ export default function InventoryPage() {
         onSearchChange={setSearchQuery}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        onExport={handleExportInventoryStock}
+        exportLabel="Export Stock"
         placeholder="Filter stock inventory by product name or SKU..."
       />
 
@@ -243,8 +295,15 @@ export default function InventoryPage() {
 
       {/* Audit Log Table */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="px-6 py-4 border-b border-slate-100">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <h3 className="font-bold text-slate-800 text-lg">Recent Stock Movement Logs</h3>
+          <button
+            onClick={handleExportStockLogs}
+            className="h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Export Stock Logs CSV"
+          >
+            <Download className="w-3.5 h-3.5 text-amber-600" /> Export Logs CSV
+          </button>
         </div>
         <table className="w-full text-left border-collapse">
           <thead>

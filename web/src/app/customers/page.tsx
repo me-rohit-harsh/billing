@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Users, Phone, Mail, MapPin } from 'lucide-react';
+import { Plus, Trash2, Users, Phone, Mail, MapPin, Download } from 'lucide-react';
 import { api, Customer } from '@/lib/api';
 import { FormModal } from '@/components/shared/FormModal';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import { TableFilter } from '@/components/shared/TableFilter';
 import { useToast } from '@/context/ToastContext';
+import { exportToCSV } from '@/lib/exportUtils';
 
 export default function CustomersPage() {
   const { toast } = useToast();
@@ -27,6 +28,27 @@ export default function CustomersPage() {
       setCustomers(res.data || []);
     } catch {
       setCustomers([]);
+    }
+  };
+
+  const handleExportCustomers = () => {
+    if (filteredCustomers.length === 0) {
+      toast.error('No customer profiles available to export.');
+      return;
+    }
+
+    const fields = [
+      { key: 'name', label: 'Customer Name' },
+      { key: 'phone', label: 'Phone Number' },
+      { key: 'email', label: 'Email Address' },
+      { key: 'address', label: 'Address / Site Location' },
+      { key: 'balanceDue', label: 'Balance Due (₹)' },
+    ];
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const success = exportToCSV(`customers_directory_${dateStr}`, filteredCustomers, fields);
+    if (success) {
+      toast.success(`Exported ${filteredCustomers.length} customer(s) to CSV!`);
     }
   };
 
@@ -72,12 +94,21 @@ export default function CustomersPage() {
           <h2 className="text-2xl font-black text-slate-800">Contractors & Customers Directory</h2>
           <p className="text-slate-500 text-sm font-medium">Manage customer contacts and registered hardware buyer profiles</p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="h-11 px-5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer"
-        >
-          <Plus className="w-4 h-4" /> Add Customer
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExportCustomers}
+            className="h-11 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+            title="Export Customers CSV"
+          >
+            <Download className="w-4 h-4 text-amber-600" /> Export CSV
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="h-11 px-5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> Add Customer
+          </button>
+        </div>
       </div>
 
       <TableFilter
@@ -85,6 +116,8 @@ export default function CustomersPage() {
         onSearchChange={setSearchQuery}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        onExport={handleExportCustomers}
+        exportLabel="Export Customers"
         placeholder="Filter customers by name, phone, or email..."
       />
 

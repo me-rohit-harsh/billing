@@ -156,7 +156,7 @@ export function CustomDropdown(props: CustomDropdownProps) {
 
     const handleSelect = (optionId: string) => {
         if (multi) {
-            const currentValues = (value as string[]);
+            const currentValues = Array.isArray(value) ? value : [];
             const newValues = currentValues.includes(optionId)
                 ? currentValues.filter(id => id !== optionId)
                 : [...currentValues, optionId];
@@ -165,6 +165,30 @@ export function CustomDropdown(props: CustomDropdownProps) {
             (onChange as (val: string) => void)(optionId);
             setIsOpen(false);
         }
+    };
+
+    const handleClear = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (multi) {
+            (onChange as (val: string[]) => void)([]);
+        } else {
+            (onChange as (val: string) => void)('');
+        }
+    };
+
+    const hasValue = multi
+        ? Array.isArray(value) && value.length > 0
+        : value !== '' && value !== undefined && value !== null;
+
+    const getDisplayText = () => {
+        if (multi) {
+            const selectedList = (selectedOptions as Option[]) || [];
+            if (selectedList.length === 0) return placeholder;
+            if (selectedList.length === 1) return selectedList[0].name;
+            if (selectedList.length === 2) return `${selectedList[0].name}, ${selectedList[1].name}`;
+            return `${selectedList.length} Selected`;
+        }
+        return (selectedOptions as Option)?.name || placeholder;
     };
 
     const DropdownMenu = (
@@ -205,10 +229,32 @@ export function CustomDropdown(props: CustomDropdownProps) {
                         </div>
                     )}
                     <div ref={optionsRef} style={{ padding: '6px', maxHeight: '280px', overflowY: 'auto' }}>
+                        {multi && (
+                            <div
+                                onClick={() => (onChange as (val: string[]) => void)([])}
+                                style={{
+                                    padding: '8px 12px',
+                                    borderRadius: '6px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    cursor: 'pointer',
+                                    background: (Array.isArray(value) && value.length === 0) ? '#eff6ff' : 'transparent',
+                                    color: (Array.isArray(value) && value.length === 0) ? '#2563eb' : '#64748b',
+                                    fontWeight: (Array.isArray(value) && value.length === 0) ? '700' : '500',
+                                    fontSize: '13px',
+                                    borderBottom: '1px solid #f1f5f9',
+                                    marginBottom: '4px',
+                                }}
+                            >
+                                <div>All Categories</div>
+                                {(Array.isArray(value) && value.length === 0) && <Check size={16} style={{ color: '#2563eb' }} />}
+                            </div>
+                        )}
                         {filteredOptions.length === 0 ? (
                             <div style={{ padding: '20px 16px', color: '#94a3b8', textAlign: 'center', fontSize: '13px' }}>No options found</div>
                         ) : (
-                            filteredOptions.map((option, index) => {
+                            filteredOptions.map((option) => {
                                 const isSelected = multi
                                     ? (Array.isArray(value) && value.includes(option._id))
                                     : (value === option._id);
@@ -257,19 +303,35 @@ export function CustomDropdown(props: CustomDropdownProps) {
                     borderRadius: effectiveBorderRadius,
                     width: '100%',
                     padding: compact ? '0 10px' : '0 16px',
-                    border: error ? '2px solid #ef4444' : isOpen ? '2px solid #3b82f6' : '2px solid #e2e8f0',
+                    border: error ? '2px solid #ef4444' : isOpen ? '2px solid #d97706' : '1px solid #e2e8f0',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    height: height || (compact ? '32px' : '44px'),
+                    height: height || (compact ? '36px' : '44px'),
                     background: '#fafafa',
                     cursor: disabled ? 'not-allowed' : 'pointer',
                 }}
             >
-                <span style={{ fontSize: compact ? '12px' : '14px', color: selectedOptions ? '#171717' : '#a3a3a3', fontWeight: '500' }}>
-                    {selectedOptions && !Array.isArray(selectedOptions) ? (selectedOptions as Option).name : placeholder}
-                </span>
-                <ChevronDown size={compact ? 14 : 18} style={{ opacity: 0.5, transform: isOpen ? 'rotate(180deg)' : 'none' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                    <span style={{ fontSize: compact ? '12px' : '14px', color: hasValue ? '#171717' : '#64748b', fontWeight: hasValue ? '600' : '500', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                        {getDisplayText()}
+                    </span>
+                    {multi && Array.isArray(value) && value.length > 0 && (
+                        <span style={{ padding: '2px 6px', fontSize: '10px', fontWeight: '800', backgroundColor: '#d97706', color: '#ffffff', borderRadius: '10px' }}>
+                            {value.length}
+                        </span>
+                    )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {clearable && hasValue && (
+                        <X
+                            size={compact ? 13 : 15}
+                            onClick={handleClear}
+                            style={{ color: '#94a3b8', cursor: 'pointer' }}
+                        />
+                    )}
+                    <ChevronDown size={compact ? 14 : 18} style={{ color: '#64748b', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                </div>
             </div>
             {isClient && createPortal(DropdownMenu, document.body)}
         </div>

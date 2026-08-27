@@ -1,6 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { getModelToken } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as https from 'https';
 import { AppModule } from './app.module';
 import { Category, CategoryDocument } from './schemas/category.schema';
 import { Product, ProductDocument } from './schemas/product.schema';
@@ -8,9 +11,46 @@ import { Customer, CustomerDocument } from './schemas/customer.schema';
 import { Invoice, InvoiceDocument } from './schemas/invoice.schema';
 import { StockLog, StockLogDocument } from './schemas/stock-log.schema';
 
+// Helper function to download an image from URL and save locally
+function downloadImage(url: string, destPath: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const download = (targetUrl: string, redirects = 0) => {
+      if (redirects > 5) {
+        resolve(false);
+        return;
+      }
+      https.get(targetUrl, (res) => {
+        if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307) {
+          if (res.headers.location) {
+            download(res.headers.location, redirects + 1);
+            return;
+          }
+        }
+        if (res.statusCode === 200) {
+          const fileStream = fs.createWriteStream(destPath);
+          res.pipe(fileStream);
+          fileStream.on('finish', () => {
+            fileStream.close();
+            resolve(true);
+          });
+          fileStream.on('error', () => {
+            fs.unlink(destPath, () => {});
+            resolve(false);
+          });
+        } else {
+          resolve(false);
+        }
+      }).on('error', () => {
+        resolve(false);
+      });
+    };
+    download(url);
+  });
+}
+
 async function seed() {
   console.log('--------------------------------------------------');
-  console.log('🛠️  BUILDPRO HARDWARE POS - DATABASE SEEDER');
+  console.log('🛠️  BUILDPRO HARDWARE POS - LOCAL IMAGE SEEDER');
   console.log('--------------------------------------------------');
 
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false });
@@ -21,6 +61,12 @@ async function seed() {
   const invoiceModel = app.get<Model<InvoiceDocument>>(getModelToken(Invoice.name));
   const stockLogModel = app.get<Model<StockLogDocument>>(getModelToken(StockLog.name));
 
+  // Ensure storage/uploads/products directory exists
+  const uploadDir = path.join(process.cwd(), 'storage', 'uploads', 'products');
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+
   console.log('🧹 Clearing existing database collections...');
   await Promise.all([
     categoryModel.deleteMany({}),
@@ -30,7 +76,7 @@ async function seed() {
     stockLogModel.deleteMany({}),
   ]);
 
-  // 1. Seed Hardware Categories
+  // 1. Seed Categories
   console.log('📦 Seeding Hardware Categories...');
   const categoryNames = [
     'Power Tools',
@@ -49,9 +95,8 @@ async function seed() {
   );
   console.log(`   └─ Seeded ${createdCategories.length} categories.`);
 
-  // 2. Seed Hardware Products
-  console.log('🔧 Seeding Hardware Products & Catalog...');
-  const rawProductsList = [
+  // 2. Product definitions with remote source image URLs for downloading
+  const productsToSeed = [
     {
       name: 'DeWalt 20V Max Cordless Drill Kit DCD771C2',
       sku: 'SKU-DW-20V',
@@ -61,7 +106,8 @@ async function seed() {
       taxRate: 18,
       stock: 18,
       unit: 'pcs',
-      imageUrl: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=500',
+      filename: 'dewalt_drill.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Bosch Professional Angle Grinder GWS 750W',
@@ -72,7 +118,8 @@ async function seed() {
       taxRate: 18,
       stock: 4,
       unit: 'pcs',
-      imageUrl: 'https://images.unsplash.com/photo-1572981779307-38b8cabb2407?w=500',
+      filename: 'bosch_grinder.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1572981779307-38b8cabb2407?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Makita Circular Saw 1800W 7-1/4 Inch',
@@ -83,7 +130,8 @@ async function seed() {
       taxRate: 18,
       stock: 8,
       unit: 'pcs',
-      imageUrl: 'https://images.unsplash.com/photo-1572981779307-38b8cabb2407?w=500',
+      filename: 'makita_saw.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1572981779307-38b8cabb2407?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Stanley FatMax Hammer Drill 18V',
@@ -94,7 +142,8 @@ async function seed() {
       taxRate: 18,
       stock: 14,
       unit: 'pcs',
-      imageUrl: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=500',
+      filename: 'stanley_drill.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Stanley Steel Curved Claw Hammer 16 oz',
@@ -105,7 +154,8 @@ async function seed() {
       taxRate: 18,
       stock: 35,
       unit: 'pcs',
-      imageUrl: 'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=500',
+      filename: 'claw_hammer.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Knipex Combination Pliers 200mm Heavy Duty',
@@ -116,7 +166,8 @@ async function seed() {
       taxRate: 18,
       stock: 14,
       unit: 'pcs',
-      imageUrl: 'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=500',
+      filename: 'knipex_pliers.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Taparia Adjustable Spanner Wrench 300mm',
@@ -127,7 +178,8 @@ async function seed() {
       taxRate: 18,
       stock: 22,
       unit: 'pcs',
-      imageUrl: 'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=500',
+      filename: 'taparia_wrench.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Stainless Steel Hex Bolts M8x50mm (Box 100)',
@@ -138,7 +190,8 @@ async function seed() {
       taxRate: 12,
       stock: 80,
       unit: 'box',
-      imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500',
+      filename: 'hex_bolts.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Self-Tapping Drywall Screws 3.5x25mm (Box 500)',
@@ -149,7 +202,8 @@ async function seed() {
       taxRate: 12,
       stock: 110,
       unit: 'box',
-      imageUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500',
+      filename: 'drywall_screws.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Finolex FlameGuard Copper Wire 1.5 sqmm (90m)',
@@ -160,7 +214,8 @@ async function seed() {
       taxRate: 18,
       stock: 3,
       unit: 'roll',
-      imageUrl: 'https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=500',
+      filename: 'finolex_1.5.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Finolex FlameGuard Copper Wire 2.5 sqmm (90m)',
@@ -171,7 +226,8 @@ async function seed() {
       taxRate: 18,
       stock: 15,
       unit: 'roll',
-      imageUrl: 'https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=500',
+      filename: 'finolex_2.5.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Schneider Electric 16A Single Pole MCB Breaker',
@@ -182,7 +238,8 @@ async function seed() {
       taxRate: 18,
       stock: 48,
       unit: 'pcs',
-      imageUrl: 'https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=500',
+      filename: 'schneider_mcb.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Havells Modular 6-Socket Extension Board 4m',
@@ -193,7 +250,8 @@ async function seed() {
       taxRate: 18,
       stock: 20,
       unit: 'pcs',
-      imageUrl: 'https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=500',
+      filename: 'havells_board.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Heavy Duty PVC Conduit Pipe 25mm (3m)',
@@ -204,7 +262,8 @@ async function seed() {
       taxRate: 18,
       stock: 5,
       unit: 'm',
-      imageUrl: 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=500',
+      filename: 'pvc_pipe.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Supreme CPVC Brass Threaded Elbow 20mm',
@@ -215,7 +274,8 @@ async function seed() {
       taxRate: 18,
       stock: 90,
       unit: 'pcs',
-      imageUrl: 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=500',
+      filename: 'cpvc_elbow.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Jaquar Dual Flush Cistern Flush Valve Kit',
@@ -226,7 +286,8 @@ async function seed() {
       taxRate: 18,
       stock: 7,
       unit: 'set',
-      imageUrl: 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=500',
+      filename: 'jaquar_valve.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Asian Paints Royale Luxury Emulsion White (4L)',
@@ -237,7 +298,8 @@ async function seed() {
       taxRate: 18,
       stock: 14,
       unit: 'pack',
-      imageUrl: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=500',
+      filename: 'asian_paints.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Berger WeatherCoat All Guard Exterior (10L)',
@@ -248,7 +310,8 @@ async function seed() {
       taxRate: 18,
       stock: 6,
       unit: 'pack',
-      imageUrl: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=500',
+      filename: 'berger_paint.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: '3M Half Facepiece Reusable Respirator Mask 6200',
@@ -259,7 +322,8 @@ async function seed() {
       taxRate: 18,
       stock: 25,
       unit: 'pcs',
-      imageUrl: 'https://images.unsplash.com/photo-1618090584126-129cd1f3fbae?w=500',
+      filename: '3m_respirator.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1618090584126-129cd1f3fbae?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Karam Full Body Safety Harness Belt Kit',
@@ -270,7 +334,8 @@ async function seed() {
       taxRate: 18,
       stock: 10,
       unit: 'set',
-      imageUrl: 'https://images.unsplash.com/photo-1618090584126-129cd1f3fbae?w=500',
+      filename: 'karam_harness.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1618090584126-129cd1f3fbae?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Ultratech Cement OPC 53 Grade (50kg Bag)',
@@ -281,7 +346,8 @@ async function seed() {
       taxRate: 18,
       stock: 150,
       unit: 'pack',
-      imageUrl: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=500',
+      filename: 'ultratech_cement.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=600&auto=format&fit=crop&q=80',
     },
     {
       name: 'Bosch Professional Laser Distance Measure 50m',
@@ -292,12 +358,41 @@ async function seed() {
       taxRate: 18,
       stock: 8,
       unit: 'pcs',
-      imageUrl: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=500',
+      filename: 'bosch_laser.jpg',
+      remoteUrl: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=600&auto=format&fit=crop&q=80',
     },
   ];
 
-  const createdProducts = await productModel.insertMany(rawProductsList);
-  console.log(`   └─ Seeded ${createdProducts.length} hardware products.`);
+  console.log('📥 Downloading & saving product images locally...');
+  const preparedProducts: any[] = [];
+
+  for (const item of productsToSeed) {
+    const localFilePath = path.join(uploadDir, item.filename);
+    const localUrl = `/uploads/products/${item.filename}`;
+
+    let downloaded = false;
+    if (!fs.existsSync(localFilePath)) {
+      console.log(`   ├─ Downloading original image for "${item.name}"...`);
+      downloaded = await downloadImage(item.remoteUrl, localFilePath);
+    } else {
+      downloaded = true;
+    }
+
+    preparedProducts.push({
+      name: item.name,
+      sku: item.sku,
+      barcode: item.barcode,
+      category: item.category,
+      price: item.price,
+      taxRate: item.taxRate,
+      stock: item.stock,
+      unit: item.unit,
+      imageUrl: downloaded ? localUrl : item.remoteUrl,
+    });
+  }
+
+  const createdProducts = await productModel.insertMany(preparedProducts);
+  console.log(`   └─ Seeded ${createdProducts.length} products with local original image assets.`);
 
   // 3. Seed Customers
   console.log('👥 Seeding Customers Directory...');
@@ -400,7 +495,7 @@ async function seed() {
   console.log(`   └─ Seeded ${createdInvoices.length} invoices and ${stockLogsToCreate.length} stock logs.`);
 
   console.log('--------------------------------------------------');
-  console.log('🎉 SUCCESS: BuildPro Hardware POS Database Seeded!');
+  console.log('🎉 SUCCESS: BuildPro Hardware POS Database & Assets Seeded!');
   console.log('--------------------------------------------------');
 
   await app.close();

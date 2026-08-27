@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Tags, Plus, Edit, Trash2, Package, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Tags, Plus, Edit, Trash2, Package, ArrowRight, AlertCircle, CheckCircle2, Download } from 'lucide-react';
 import { api, Product } from '@/lib/api';
 import { FormModal } from '@/components/shared/FormModal';
 import { ConfirmModal } from '@/components/shared/ConfirmModal';
 import { useToast } from '@/context/ToastContext';
+import { exportToCSV } from '@/lib/exportUtils';
 
 interface CategoryItem {
   _id: string;
@@ -47,6 +48,31 @@ export default function CategoriesPage() {
       console.error('Failed to load category data', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleExportCategories = () => {
+    if (categories.length === 0) {
+      toast.error('No categories available to export.');
+      return;
+    }
+
+    const exportData = categories.map((cat) => ({
+      id: cat._id,
+      name: cat.name,
+      mappedProductsCount: products.filter((p) => p.category === cat.name).length,
+    }));
+
+    const fields = [
+      { key: 'id', label: 'Category ID' },
+      { key: 'name', label: 'Category Name' },
+      { key: 'mappedProductsCount', label: 'Assigned Products Count' },
+    ];
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const success = exportToCSV(`product_categories_${dateStr}`, exportData, fields);
+    if (success) {
+      toast.success(`Exported ${categories.length} category item(s) to CSV!`);
     }
   };
 
@@ -133,12 +159,21 @@ export default function CategoriesPage() {
           </div>
         </div>
 
-        <button
-          onClick={openCreateModal}
-          className="h-12 px-6 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
-        >
-          <Plus className="w-4 h-4" /> Add New Category
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={handleExportCategories}
+            className="h-12 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+            title="Export Categories CSV"
+          >
+            <Download className="w-4 h-4 text-amber-600" /> Export CSV
+          </button>
+          <button
+            onClick={openCreateModal}
+            className="h-12 px-6 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> Add New Category
+          </button>
+        </div>
       </div>
 
       {categoryError && (

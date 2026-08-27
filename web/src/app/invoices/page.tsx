@@ -1,13 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Printer, Receipt, FileText } from 'lucide-react';
+import { Printer, Receipt, FileText, Download } from 'lucide-react';
 import { api, Invoice } from '@/lib/api';
 import { TableFilter } from '@/components/shared/TableFilter';
 import { useStoreSettings } from '@/context/StoreSettingsContext';
+import { useToast } from '@/context/ToastContext';
+import { exportToCSV } from '@/lib/exportUtils';
 
 export default function InvoicesPage() {
   const { settings } = useStoreSettings();
+  const { toast } = useToast();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [activeReceipt, setActiveReceipt] = useState<Invoice | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,6 +29,31 @@ export default function InvoicesPage() {
     }
   };
 
+  const handleExportInvoices = () => {
+    if (filteredInvoices.length === 0) {
+      toast.error('No invoices available to export.');
+      return;
+    }
+
+    const fields = [
+      { key: 'invoiceNumber', label: 'Invoice Number' },
+      { key: 'createdAt', label: 'Date/Time', transform: (val: string) => val ? new Date(val).toLocaleString() : '' },
+      { key: 'customerName', label: 'Customer Name', transform: (val: string) => val || 'Walk-in Customer' },
+      { key: 'itemsCount', label: 'Items Count', transform: (_: any, inv: Invoice) => inv.items?.length || 0 },
+      { key: 'subtotal', label: 'Subtotal (₹)' },
+      { key: 'taxTotal', label: 'Tax Total (₹)' },
+      { key: 'discountTotal', label: 'Discount Total (₹)' },
+      { key: 'grandTotal', label: 'Grand Total (₹)' },
+      { key: 'paymentMode', label: 'Payment Mode' },
+    ];
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const success = exportToCSV(`sales_invoices_${dateStr}`, filteredInvoices, fields);
+    if (success) {
+      toast.success(`Exported ${filteredInvoices.length} sales invoice(s) to CSV!`);
+    }
+  };
+
   const filteredInvoices = invoices.filter(
     (inv) =>
       inv.invoiceNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -40,6 +68,13 @@ export default function InvoicesPage() {
           <h2 className="text-2xl font-black text-slate-800">Sales Invoices & Billing History</h2>
           <p className="text-slate-500 text-sm font-medium">Search past sales, print thermal receipts, and audit customer invoices</p>
         </div>
+        <button
+          onClick={handleExportInvoices}
+          className="h-11 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+          title="Export Invoices CSV"
+        >
+          <Download className="w-4 h-4 text-amber-600" /> Export CSV
+        </button>
       </div>
 
       <TableFilter
@@ -47,6 +82,8 @@ export default function InvoicesPage() {
         onSearchChange={setSearchQuery}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        onExport={handleExportInvoices}
+        exportLabel="Export Invoices"
         placeholder="Search by invoice number, customer, or payment mode..."
       />
 

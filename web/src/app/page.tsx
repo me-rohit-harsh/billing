@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Printer, Package, Plus, Minus, UserCheck } from 'lucide-react';
+import { ShoppingCart, Printer, Package, Plus, Minus, UserCheck, Download } from 'lucide-react';
 import { api, Product, Customer, Invoice } from '@/lib/api';
 import { TableFilter } from '@/components/shared/TableFilter';
 import { CustomDropdown } from '@/components/shared/CustomDropdown';
 import { useStoreSettings } from '@/context/StoreSettingsContext';
 import { useToast } from '@/context/ToastContext';
+import { exportToCSV } from '@/lib/exportUtils';
 
 export default function POSPage() {
   const { settings } = useStoreSettings();
@@ -25,9 +26,52 @@ export default function POSPage() {
   const [discountValue, setDiscountValue] = useState<number>(0);
   const [paymentMode, setPaymentMode] = useState<'CASH' | 'UPI' | 'CARD' | 'CREDIT'>('CASH');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [categories, setCategories] = useState<{ _id: string; name: string }[]>([]);
   const [activeReceipt, setActiveReceipt] = useState<Invoice | null>(null);
+
+  const filteredProducts = products
+    .filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase())))
+    .filter((p) => {
+      if (!selectedCategories || selectedCategories.length === 0) return true;
+      return (
+        selectedCategories.includes(p.category) ||
+        categories.some((c) => selectedCategories.includes(c._id) && c.name === p.category)
+      );
+    });
+
+  const handleExportPOS = () => {
+    if (cart.length > 0) {
+      const fields = [
+        { key: 'name', label: 'Item Name' },
+        { key: 'category', label: 'Category' },
+        { key: 'price', label: 'Unit Price (₹)' },
+        { key: 'qty', label: 'Quantity' },
+        { key: 'taxRate', label: 'Tax Rate (%)' },
+        { key: 'itemTotal', label: 'Line Total (₹)', transform: (_: any, item: any) => item.price * item.qty },
+      ];
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const success = exportToCSV(`pos_cart_items_${dateStr}`, cart, fields);
+      if (success) {
+        toast.success(`Exported ${cart.length} cart item(s) to CSV!`);
+      }
+    } else if (filteredProducts.length > 0) {
+      const fields = [
+        { key: 'name', label: 'Product Name' },
+        { key: 'category', label: 'Category' },
+        { key: 'price', label: 'Price (₹)' },
+        { key: 'stock', label: 'Stock On Hand' },
+        { key: 'unit', label: 'Unit' },
+      ];
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const success = exportToCSV(`pos_quick_catalog_${dateStr}`, filteredProducts, fields);
+      if (success) {
+        toast.success(`Exported ${filteredProducts.length} POS catalog product(s) to CSV!`);
+      }
+    } else {
+      toast.error('No POS items available to export.');
+    }
+  };
 
   // Load cart from localStorage on initial render
   useEffect(() => {
@@ -198,14 +242,28 @@ export default function POSPage() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           categories={categories}
-          selectedCategory={selectedCategory}
-          onCategorySelect={setSelectedCategory}
+          selectedCategory={selectedCategories}
+          onCategorySelect={(val) => {
+            if (Array.isArray(val)) {
+              setSelectedCategories(val);
+            } else {
+              setSelectedCategories(val ? [val] : []);
+            }
+          }}
+          onExport={handleExportPOS}
+          exportLabel="Export POS Data"
           placeholder="Search products by name or category..."
         />
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {products
             .filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || (p.category && p.category.toLowerCase().includes(searchQuery.toLowerCase())))
-            .filter((p) => !selectedCategory || p.category === selectedCategory)
+            .filter((p) => {
+              if (!selectedCategories || selectedCategories.length === 0) return true;
+              return (
+                selectedCategories.includes(p.category) ||
+                categories.some((c) => selectedCategories.includes(c._id) && c.name === p.category)
+              );
+            })
             .map((product) => {
               const cartItem = cart.find((item) => item._id === product._id);
               const qtyInCart = cartItem ? cartItem.qty : 0;
