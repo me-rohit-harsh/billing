@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShoppingCart, Package, Users, Receipt, Boxes, Settings, Tags } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, Package, Users, Receipt, Boxes, Settings, Tags } from 'lucide-react';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -13,6 +13,7 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
   const pathname = usePathname();
 
   const navItems = [
+    { href: '/dashboard', label: 'Analytics Dashboard', icon: LayoutDashboard },
     { href: '/', label: 'POS Console', icon: ShoppingCart },
     { href: '/products', label: 'Products Catalog', icon: Package },
     { href: '/categories', label: 'Product Categories', icon: Tags },

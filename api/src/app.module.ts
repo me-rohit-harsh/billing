@@ -13,6 +13,7 @@ import { StockLog, StockLogSchema } from './schemas/stock-log.schema';
 import { ProductsController } from './products/products.controller';
 import { InvoicesController } from './invoices/invoices.controller';
 import { CustomersController, CategoriesController } from './controllers/supporting.controller';
+import { DashboardController } from './dashboard/dashboard.controller';
 
 import { AuthModule } from './auth/auth.module';
 
@@ -44,6 +45,7 @@ import { AuthModule } from './auth/auth.module';
     InvoicesController,
     CustomersController,
     CategoriesController,
+    DashboardController,
   ],
   providers: [],
 })
