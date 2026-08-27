@@ -6,6 +6,37 @@ export const api = axios.create({
   baseURL: API_URL,
 });
 
+api.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('billing_auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (typeof window !== 'undefined' && error.response && error.response.status === 401) {
+      localStorage.removeItem('billing_auth_token');
+      localStorage.removeItem('billing_auth_user');
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  name: string;
+  role: string;
+}
+
 export interface Product {
   _id: string;
   name: string;

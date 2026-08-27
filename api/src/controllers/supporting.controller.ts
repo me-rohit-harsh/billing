@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Body, Param, Put, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Customer, CustomerDocument } from '../schemas/customer.schema';
 import { Category, CategoryDocument } from '../schemas/category.schema';
 
+@UseGuards(JwtAuthGuard)
 @Controller('customers')
 export class CustomersController {
   constructor(@InjectModel(Customer.name) private customerModel: Model<CustomerDocument>) {}
@@ -27,6 +29,7 @@ export class CustomersController {
   }
 }
 
+@UseGuards(JwtAuthGuard)
 @Controller('categories')
 export class CategoriesController {
   constructor(@InjectModel(Category.name) private categoryModel: Model<CategoryDocument>) {}

@@ -30,13 +30,13 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
         {/* Header Branding */}
         <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} py-3 mb-6 border-b border-slate-100`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black text-xl shadow-md shrink-0">
-              B
+            <div className="w-10 h-10 rounded-xl bg-amber-600 flex items-center justify-center text-white font-black text-xl shadow-md shrink-0">
+              🛠️
             </div>
             {!isCollapsed && (
               <div className="animate-in fade-in duration-200">
-                <h1 className="font-bold text-slate-900 leading-none text-base">BillingPro</h1>
-                <span className="text-[11px] font-bold text-blue-600">Offline POS</span>
+                <h1 className="font-bold text-slate-900 leading-none text-base">BuildPro</h1>
+                <span className="text-[11px] font-bold text-amber-600">Hardware & POS</span>
               </div>
             )}
           </div>

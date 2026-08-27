@@ -32,8 +32,12 @@ export default function POSPage() {
       setProducts(res.data);
     } catch {
       setProducts([
-        { _id: '1', name: 'Sample Item A', price: 100, taxRate: 18, stock: 50, unit: 'pcs', category: 'General' },
-        { _id: '2', name: 'Sample Item B', price: 250, taxRate: 12, stock: 20, unit: 'pcs', category: 'Electronics' },
+        { _id: '1', name: 'DeWalt 20V Max Cordless Drill Kit', price: 4999, taxRate: 18, stock: 15, unit: 'pcs', category: 'Power Tools' },
+        { _id: '2', name: 'Bosch Professional Angle Grinder 750W', price: 3200, taxRate: 18, stock: 10, unit: 'pcs', category: 'Power Tools' },
+        { _id: '3', name: 'Stainless Steel Screws 4x40mm (Box of 100)', price: 250, taxRate: 12, stock: 120, unit: 'box', category: 'Fasteners' },
+        { _id: '4', name: 'Heavy Duty PVC Conduit Pipe 25mm (3m)', price: 180, taxRate: 18, stock: 85, unit: 'm', category: 'Plumbing' },
+        { _id: '5', name: 'Finolex FlameGuard Copper Wire 1.5 sqmm (90m)', price: 1450, taxRate: 18, stock: 24, unit: 'roll', category: 'Electrical' },
+        { _id: '6', name: 'Asian Paints Royale Luxury Emulsion (4L)', price: 2200, taxRate: 18, stock: 18, unit: 'pack', category: 'Paints' },
       ]);
     }
   };

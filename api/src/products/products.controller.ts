@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Param, Put, Delete, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Put, Delete, UseInterceptors, UploadedFile, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -7,6 +8,7 @@ import { StockLog, StockLogDocument } from '../schemas/stock-log.schema';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 
+@UseGuards(JwtAuthGuard)
 @Controller('products')
 export class ProductsController {
   constructor(

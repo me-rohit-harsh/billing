@@ -1,10 +1,12 @@
-import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Invoice, InvoiceDocument } from '../schemas/invoice.schema';
 import { Product, ProductDocument } from '../schemas/product.schema';
 import { StockLog, StockLogDocument } from '../schemas/stock-log.schema';
 
+@UseGuards(JwtAuthGuard)
 @Controller('invoices')
 export class InvoicesController {
   constructor(
